@@ -1,0 +1,119 @@
+<drac2> #Dynamic Encounter 2
+arguments = &ARGS&
+parsed = argparse(arguments)
+mode,Source,C,Location,z = 'default','No Encounter Source Found!','Battles','',"\\\""
+tN=sText=sEnc=sRolls=sName=sCode=Creator=ShortSource=error=""
+Encounter=EncounterTable=LocationTiers=Rolls=Table=c=[]
+n = '\n'
+num,xpTotal = 1,0
+encounter=[]
+gvars= load_json(get_svar("DencMapSources") or '[]') or ["020cd16d-c806-4595-8e43-b63159ed0498"]
+
+for enc in gvars:
+   encounter=encounter+load_json(get_gvar(enc))['encounter']
+
+if arguments:
+ for x in ["list","entry","table","help"]:
+  if arguments[0].lower() in x:
+   mode = x
+   arguments.remove(arguments[0])
+   break
+
+# We're not in a special mode - denc Woods 2
+if not mode == 'help' and arguments:
+   for en in encounter:
+      if arguments[0].lower() in en.loc.lower():
+         EncounterTable = en
+         Location = en.loc
+         Source = en.source
+         LocationTiers = en.tiers
+         if 'shortSource' in en:
+            ShortSource = en.shortSource
+         if 'creator' in en:
+            Creator = en.creator
+         # Remove the Location Arguement
+         arguments.remove(arguments[0])
+         break
+if not Location:
+   mode='help'
+
+# We're looking for a table choice now
+if mode == 'table':
+   continue
+
+# Confirm the Encounter Level, then time for Rolls!
+elif not mode == 'help' and arguments:
+   Tier = int(arguments[0])
+   arguments.remove(arguments[0])
+   for foundTier in LocationTiers:
+      if foundTier.tier==Tier:
+         if mode == 'table':
+            Table = foundTier.table
+            break
+         if mode == 'entry' and arguments:
+            r=vroll(f"{arguments[0]}")
+         elif mode == 'entry':
+            error=error+'\n**You must provide a valid encounter to view.**\n'
+            break
+         else:
+            h=[x.max for x in foundTier.table][-1]
+            r=vroll(f"1d{h}")
+         Encounter=[x for x in foundTier.table if r.total<=x.max][0]
+         break
+   if Encounter:
+      sText= Encounter.text
+      sName= Encounter.name
+      if 'rolls' in Encounter:
+         Rolls=Encounter.rolls.split(",")
+         for v in Rolls:
+            c.append(vroll(v))
+            sText=sText.replace("#"+str(num)+"#",str("`"+str(c[-1].total)+"`"))
+            num=num+1
+            sRolls=sRolls+c[-1].full+" | "
+         sRolls=sRolls[::-1].replace(" | "[::-1],"",1)[::-1]
+      if 'xp' in Encounter:
+         num=0
+         XP=Encounter.xp.split(",")
+         for rolled in c:
+            # DO THE XP MULTIPLY
+            xpTotal = xpTotal + (rolled.total * int(XP[num]))
+            num=num+1
+      if 'code' in Encounter:
+         sEnc=(dump_json(Encounter.code).strip("\""))
+         sCode=sEnc.split(':')[0].replace("\\\"","\"")
+         sEnc=sEnc.replace(z+z,z+"\"",1)
+         sEnc=sEnc.replace(z+"]","\"]",1)
+         sEnc=sEnc.replace("\\","",2)
+         sEnc=sEnc.replace(z+",","\",")
+         sEnc=sEnc.replace(z+"!i madd","\"!i madd")
+         num=1
+         for v in Rolls:
+            if not v=="0":
+               sEnc=sEnc.replace("#"+str(num)+"#",str(c[num-1].total))
+               num=num+1
+         if uvar_exists(C):
+            tm=Battles
+            if tm[-2]==']':
+               tm=tm.replace("]}","], "+(sEnc)+"}", 1)
+               set_uvar(C, tm)
+            else:
+               set_uvar(C, "{"+sEnc+"}")
+         else:
+            set_uvar(C, "{"+sEnc+"}")
+   elif mode == 'table':
+      #DO STUFF FOR TABLE
+      continue
+   elif not mode == 'help':
+      error=error+'\n**You must provide a valid Tier and location for the encounter.**\n'
+elif not mode == 'help':
+   error=error+'\n**You must provide a valid Tier and location for the encounter.**\n'
+
+LocationList="\n_Location_ | _Tier(s)_ | _Source_\n"+"\n".join([x.loc + " | "+str(x.minTier)+(("-"+str(x.maxTier)) if not x.maxTier==x.minTier else '')+(" | "+ x.shortSource if 'shortSource' in x else '') for x in encounter])
+title="Dynamic Encounter Tool - "+mode.capitalize() if Encounter else "Dynamic Encounter Tool - Help"
+descStr=("_"+Source+("\nCreator: "+Creator if Creator else "")+"_\n**"+Location+"**\nRoll: "+r.full+"\n\n"+sText+"\n"+sRolls) if Encounter else LocationList if mode=='help' else Source+error+LocationList
+useStr = "-f 'Use Command|`!battle begin "+sCode+"`'" if not mode=='list' and sEnc else ""
+xpStr = "-f 'XP Total|`"+str(xpTotal)+"`'" if xpTotal else ''
+foot="Use With: !denc [entry] <terrain> <tier> [entry #] | v3.0 Made by @Mahksad#5996"
+
+return (f'embed -title "{title}" -desc \"{descStr}\" {useStr} {xpStr} -footer "{foot}"')
+</drac2>
