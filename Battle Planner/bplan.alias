@@ -77,13 +77,15 @@ elif Mode[0] == 'begin':
 
 elif Mode[0] == 'view':
   args.remove(args[0])
+  pick=creaout=""
+  for plan in Battles:
+    out = out + f'`{plan}`\n'  
   if not args:
-    for plan in Battles:
-      out = out + f'`{plan}`\n'
     return (f'{title} -desc "You must specify a Battle Name:\n{out}" {foot}')
   for plan in Battles:
     if args[0].lower() in plan.lower():
-      for creature in Battles[plan]:
+      pick=plan
+      for creature in Battles[pick]:
         crea=creature
         work=crea.split(' ')
         # check we're not old format
@@ -99,7 +101,10 @@ elif Mode[0] == 'view':
         if not 'adv' in work or 'dis' in work:
           work=crea.split(' -')
         opts=creature.split(name)[1] if creature.split(name)[1] else 'None'
-        out = out + f'-f "\"{name}\"|- **Args:** {opts}" '
+        creaout = creaout + f'-f "\"{name}\"|- **Args:** {opts}" '
       break
-  return (f'embed -title "{BP} - Battle Viewer" -desc "__{plan}__" {out} {foot}')
+  if pick:
+    return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__" {creaout} {foot}')
+  else:
+    return (f'embed -title "{BP} - Battle Viewer" -desc "Battle `{args[0]}` Not Found\n{out}" {foot}')
 </drac2>

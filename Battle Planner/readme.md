@@ -3,10 +3,16 @@ A pre-planning tool for creating, viewing, and beginning Avrae Combat Initiative
 Works fully with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20)
 Can load encounters created with `!battle` by _Derixyleth#0636_
 
+**Features**
+`view <battlename>` - Look at a specific battle
+`begin <battlename>` - Start Initiative for a battle
+`end` - End Initiative (Same as !i end)
+`delete <battlename>` - Delete a single battle by name
+`clear confirm` - Deletes all battles, but only if both commands are passed
+
 **In Progress**
 Creating New Battles in Tool
 Editing Existing Battles
-Delete (single or all) Battles
 
 **Future Features**
 Advanced format (XP, Reroll on Battle Being, etc)
