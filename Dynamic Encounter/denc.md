@@ -1,7 +1,8 @@
 An improved encounter tables tool.
 Multiroll encounters, easy format, auto `!battle` support.
 
-**Dependencies [Required]**
+**Works With**
+- [Battle Planner Tool](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f)
 - `!battle` by _Derixyleth#0636_ | [Avrae Development Server](http://invite.avrae.io/)
 
 **Rolling Encounters**

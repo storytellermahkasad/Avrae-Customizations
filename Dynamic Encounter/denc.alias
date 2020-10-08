@@ -1,13 +1,22 @@
 <drac2> #Dynamic Encounter
 arguments = &ARGS&
 parsed = argparse(arguments)
-mode,Source,C,Location,z = 'default','No Encounter Source Found!','Battles','',"\\\""
+mode,Source,Location,z = 'default','No Encounter Source Found!','',"\\\""
 tN=sText=sEnc=sRolls=sName=sCode=Creator=ShortSource=error=""
 Encounter=EncounterTable=LocationTiers=Rolls=Table=c=[]
 n = '\n'
 num,xpTotal = 1,0
 encounter=[]
-gvars= load_json(get_svar("DencMapSources") or '[]') or ["020cd16d-c806-4595-8e43-b63159ed0498"]
+gvars= load_json(get("DencEncounterSources") or '[]') or load_json(get_svar("DencEncounterSources") or '[]') or ["020cd16d-c806-4595-8e43-b63159ed0498"]
+foot="Use With: !denc [entry] <terrain> <tier> [entry #] | v3.0 Made by @Mahksad#5996"
+
+# Figure out where to store results
+#Destination='BattlePlans' # Default
+#if get('BattlePlanLoc'):
+#   Destination = get('BattlePlanLoc')
+#elif get('Battles'):
+#   return (f'embed -title "Dynamic Encounter Tool - Setup" -desc "You do not currently have a destination setup.\n\nDEnc can output rolled battles to several locations:\n`BattlePlans` - For use with Battle Planner, newest format\n`Battles` - for use with `!battle`, legacy format\n\nPlease run one of the following commands with the selected format:\n`!uvar BattlePlanLoc FORMAT` - User-only\n`!svar BattlePlanLoc FORMAT` - Server-wide\n" {foot}')
+Destination= get('BattlePlanLoc') or get_svar('BattlePlanLoc','Battles')
 
 for enc in gvars:
    encounter=encounter+load_json(get_gvar(enc))['encounter']
@@ -91,15 +100,15 @@ elif not mode == 'help' and arguments:
             if not v=="0":
                sEnc=sEnc.replace("#"+str(num)+"#",str(c[num-1].total))
                num=num+1
-         if uvar_exists(C):
+         if uvar_exists(Destination):
             tm=Battles
             if tm[-2]==']':
                tm=tm.replace("]}","], "+(sEnc)+"}", 1)
-               set_uvar(C, tm)
+               set_uvar(Destination, tm)
             else:
-               set_uvar(C, "{"+sEnc+"}")
+               set_uvar(Destination, "{"+sEnc+"}")
          else:
-            set_uvar(C, "{"+sEnc+"}")
+            set_uvar(Destination, "{"+sEnc+"}")
    elif mode == 'table':
       #DO STUFF FOR TABLE
       continue

@@ -1,0 +1,105 @@
+<drac2> # Battle Planner
+args = &ARGS&
+com = ""
+out = ""
+Commands = ["view","begin","end","help", "?", "delete", "clear"]
+Mode=[x for x in args if x.lower() in Commands]
+Source=get('BattlePlanLoc', 'Battles') #or get_svar('BattlePlanLoc','Battles')
+Battles = load_json(get(Source, '{}'))
+foot=f'-footer "!bplan help | Battle Source: {Source} | v1.0 Made by @Mahksad#5996"'
+BP="Battle Planner"
+title=f'embed -title "{BP}"'
+
+if not Mode or (not Battles and not (Mode[0]=='help' or Mode[0]=='?')):
+  for plan in Battles:
+    out = out + f'`{plan}`\n'
+  if not out:
+    out = f'"No Battles Found. Add one with `!denc` or manually to `!uvar {Source}`."'
+    return (f'{title} -desc "Select a Battle Plan:\n\"{out}\"" {foot}')
+  else:
+    return (f'{title} -desc "Select a Battle Plan:\n{out}" {foot}')
+
+elif Mode[0] == 'help' or Mode[0] == '?':
+  return (f'embed -title "{BP} - Help" -desc "The Battle Planner Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats.\n\n`view <battlename>` - Look at a specific battle\n`begin <battlename>` - Start Initiative for a battle\n`end` - End Initiative (Same as `!i end`)\n`delete <battlename>` - Delete a single battle by name\n`clear confirm` - Deletes all battles, but only if both commands are passed\n\nBPlan is compatible with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20) and `!battle` by _Derixyleth#0636_\n\nCurrently BPlan is under development.\nSee the workshop (`!help bplan`) for more details." {foot}')
+
+elif Mode[0] == 'end':
+  return (f'i end')
+
+elif Mode[0] == 'clear':
+  args.remove(args[0])
+  if not args or not args[0]=='confirm':
+    return (f'embed -title "{BP} - Clear All Battles" -desc "You must specify a confirmation to clear all battles:\n`!bplan clear confirm`" {foot}')
+  else:
+    set_uvar(Source, "{}")
+    return (f'embed -title "{BP} - Clear All Battles" -desc "All Battles Cleared. Add more with `!denc`, `!battle`, or manually to {Source}" {foot}')
+
+elif Mode[0] == 'delete':
+  args.remove(args[0])
+  pick=""
+  for plan in Battles:
+    out = out + f'`{plan}`\n'
+    if args and args[0].lower() in plan.lower():
+      pick=plan
+      break
+  if not args:
+    return (f'embed -title "{BP} - Delete Battle" -desc "You must specify a Battle Name to Delete:\n{out}" {foot}')
+  elif not pick:
+    return (f'embed -title "{BP} - Delete Battle" -desc "Battle `{args[0]}` Not Found\n{out}" {foot}')
+  else:
+    out=out.replace(f'`{pick}`','')
+    Battles.pop(pick)
+    set_uvar(Source, dump_json(Battles))
+    return (f'embed -title "{BP} - Delete Battle" -desc "Battle Deleted: `{pick}`\n\nRemaing Battles:\n{out}" {foot}')
+
+elif Mode[0] == 'begin':
+  args.remove(args[0])
+  pick=""
+  for plan in Battles:
+    out = out + f'`{plan}`\n'
+    if args and args[0].lower() in plan.lower():
+      pick=plan
+      break
+  if not args:
+    return (f'embed -title "{BP} - Begin Battle" -desc "You must specify a Battle Name:\n{out}" {foot}')
+  elif not pick:
+    return (f'embed -title "{BP} - Begin Battle" -desc "Battle `{args[0]}` Not Found\n{out}" {foot}')
+  else:
+    com = Battles[pick][0]
+  for creature in Battles[pick]:
+    crea = creature.split(' ')
+    # check we're not old format
+    if crea[0] == '!i':
+      crea = creature.replace('!i madd ','')
+    else:
+      crea = creature    
+    out = out + f'!i madd {crea}\n'
+  return (f'multiline\n!i begin\n{out}')
+
+elif Mode[0] == 'view':
+  args.remove(args[0])
+  if not args:
+    for plan in Battles:
+      out = out + f'`{plan}`\n'
+    return (f'{title} -desc "You must specify a Battle Name:\n{out}" {foot}')
+  for plan in Battles:
+    if args[0].lower() in plan.lower():
+      for creature in Battles[plan]:
+        crea=creature
+        work=crea.split(' ')
+        # check we're not old format
+        if work[0] == '!i':
+          crea=crea.replace('!i madd ','')
+          work=crea.split(' ')
+        # Found a "Name Space"
+        if crea[0] == '\"':
+          name=crea.split(' -')[0]
+        else:
+          name=work[0]
+        # check we're not adv|dis so first break is name
+        if not 'adv' in work or 'dis' in work:
+          work=crea.split(' -')
+        opts=creature.split(name)[1] if creature.split(name)[1] else 'None'
+        out = out + f'-f "\"{name}\"|- **Args:** {opts}" '
+      break
+  return (f'embed -title "{BP} - Battle Viewer" -desc "__{plan}__" {out} {foot}')
+</drac2>
