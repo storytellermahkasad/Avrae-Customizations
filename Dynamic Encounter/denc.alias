@@ -1,4 +1,4 @@
-<drac2> #Dynamic Encounter 2
+<drac2> #Dynamic Encounter
 arguments = &ARGS&
 parsed = argparse(arguments)
 mode,Source,C,Location,z = 'default','No Encounter Source Found!','Battles','',"\\\""
