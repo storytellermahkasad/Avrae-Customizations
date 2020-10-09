@@ -4,7 +4,7 @@ com = ""
 out = ""
 Commands = ["view","begin","end","help", "?", "delete", "clear"]
 Mode=[x for x in args if x.lower() in Commands]
-Source=get('BattlePlanLoc', 'Battles') #or get_svar('BattlePlanLoc','Battles')
+Source=get('BattlePlanLoc', 'Battles')
 Battles = load_json(get(Source, '{}'))
 foot=f'-footer "!bplan help | Battle Source: {Source} | v1.0 Made by @Mahksad#5996"'
 BP="Battle Planner"
@@ -12,15 +12,15 @@ title=f'embed -title "{BP}"'
 
 if not Mode or (not Battles and not (Mode[0]=='help' or Mode[0]=='?')):
   for plan in Battles:
-    out = out + f'`{plan}`\n'
+    out = out + f'`\'{plan}\'`\n'
   if not out:
     out = f'"No Battles Found. Add one with `!denc` or manually to `!uvar {Source}`."'
     return (f'{title} -desc "Select a Battle Plan:\n\"{out}\"" {foot}')
   else:
-    return (f'{title} -desc "Select a Battle Plan:\n{out}" {foot}')
+    return (f'{title} -desc "The Battle Planner Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats.\n\n`view <battlename>` - Look at a specific battle\n`begin <battlename>` - Start Initiative for a battle\n`end` - End Initiative (Same as `!i end`)\n`delete <battlename>` - Delete a single battle by name\n`clear confirm` - Deletes all battles, but only if both commands are passed\n\nSelect a Battle Plan:\n{out}" {foot}')
 
 elif Mode[0] == 'help' or Mode[0] == '?':
-  return (f'embed -title "{BP} - Help" -desc "The Battle Planner Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats.\n\n`view <battlename>` - Look at a specific battle\n`begin <battlename>` - Start Initiative for a battle\n`end` - End Initiative (Same as `!i end`)\n`delete <battlename>` - Delete a single battle by name\n`clear confirm` - Deletes all battles, but only if both commands are passed\n\nBPlan is compatible with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20) and `!battle` by _Derixyleth#0636_\n\nCurrently BPlan is under development.\nSee the workshop (`!help bplan`) for more details." {foot}')
+  return (f'embed -title "{BP} - Help" -desc "The Battle Planner Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats.\n\n`view <battlename>` - Look at a specific battle\n`begin <battlename>` - Start Initiative for a battle\n`end` - End Initiative (Same as `!i end`)\n`delete <battlename>` - Delete a single battle by name\n`clear confirm` - Deletes all battles, but only if both commands are passed\n\nBPlan is compatible with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20) and `!battle` by _Derixyleth#0636_\n\nCurrently BPlan is under development.\nSee the [workshop](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f) for more details." {foot}')
 
 elif Mode[0] == 'end':
   return (f'i end')
@@ -37,16 +37,15 @@ elif Mode[0] == 'delete':
   args.remove(args[0])
   pick=""
   for plan in Battles:
-    out = out + f'`{plan}`\n'
+    out = out + f'`\'{plan}\'`\n'
     if args and args[0].lower() in plan.lower():
       pick=plan
-      break
   if not args:
     return (f'embed -title "{BP} - Delete Battle" -desc "You must specify a Battle Name to Delete:\n{out}" {foot}')
   elif not pick:
     return (f'embed -title "{BP} - Delete Battle" -desc "Battle `{args[0]}` Not Found\n{out}" {foot}')
   else:
-    out=out.replace(f'`{pick}`','')
+    out=out.replace(f'`\'{pick}\'`','',1)
     Battles.pop(pick)
     set_uvar(Source, dump_json(Battles))
     return (f'embed -title "{BP} - Delete Battle" -desc "Battle Deleted: `{pick}`\n\nRemaing Battles:\n{out}" {foot}')
@@ -55,10 +54,9 @@ elif Mode[0] == 'begin':
   args.remove(args[0])
   pick=""
   for plan in Battles:
-    out = out + f'`{plan}`\n'
+    out = out + f'`\'{plan}\'`\n'
     if args and args[0].lower() in plan.lower():
       pick=plan
-      break
   if not args:
     return (f'embed -title "{BP} - Begin Battle" -desc "You must specify a Battle Name:\n{out}" {foot}')
   elif not pick:
@@ -77,31 +75,24 @@ elif Mode[0] == 'begin':
 
 elif Mode[0] == 'view':
   args.remove(args[0])
-  pick=creaout=""
+  pick=creaout=opts=""
   for plan in Battles:
-    out = out + f'`{plan}`\n'  
-  if not args:
-    return (f'{title} -desc "You must specify a Battle Name:\n{out}" {foot}')
+    out = out + f'`\'{plan}\'`\n'
   for plan in Battles:
     if args[0].lower() in plan.lower():
       pick=plan
       for creature in Battles[pick]:
         crea=creature
-        work=crea.split(' ')
         # check we're not old format
-        if work[0] == '!i':
+        if creature.startswith('!i'):
           crea=crea.replace('!i madd ','')
-          work=crea.split(' ')
-        # Found a "Name Space"
-        if crea[0] == '\"':
-          name=crea.split(' -')[0]
-        else:
-          name=work[0]
-        # check we're not adv|dis so first break is name
-        if not 'adv' in work or 'dis' in work:
-          work=crea.split(' -')
-        opts=creature.split(name)[1] if creature.split(name)[1] else 'None'
-        creaout = creaout + f'-f "\"{name}\"|- **Args:** {opts}" '
+        crename = crea.split(' -')[0]
+        # Remove adv/dis from the name
+        crename = crename.replace(' adv','').replace(' dis', '')
+        # Get all the Options Out
+        work=argparse(crea)
+        opts = ("\n*Name:* "+ work.join('name'," ") if work.get('name') else '') + ("\n*Num:* "+ work.last('n',None,str) if work.get('n') else '') + ("\n*Group:* "+ work.join('group'," ") if work.get('group') else '') + ("\n\n" if work.adv() or work.get('b') or work.get('p') or work.get('hp') or work.get('thp') or work.get('ac') else '') + ("*Adv:* "+("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + (" *-b:* "+ work.last('b',None,str) if work.get('b') else '') + (" *-p:* "+ work.last('p',None,str) if work.get('p') else '') + (" *HP:* "+ work.last('hp',None,str) if work.get('hp') else '') + (" *THP:* "+ work.last('thp',None,str) if work.get('thp') else '') + (" *AC:* "+ work.last('ac',None,str) if work.get('ac') else '') + ("\n" if work.get('h') or work.get('rollhp') else '') + ("*Not Hidden* " if work.get('h') else '') + ("*Roll for HP*" if work.get('rollhp') else '') + ("\n\n*Note:* "+ work.join('note'," ") if work.get('note') else '')
+        creaout = creaout + f'-f "\"{crename}\"|{opts}" '
       break
   if pick:
     return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__" {creaout} {foot}')
