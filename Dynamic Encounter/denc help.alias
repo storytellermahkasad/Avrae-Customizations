@@ -1,0 +1,55 @@
+<drac2> #Dynamic Encounter
+arguments = &ARGS&
+parsed = argparse(arguments)
+mode,Source,Location,z = 'default','No Encounter Source Found!','',"\\\""
+tN=sText=sEnc=sRolls=sName=sCode=Creator=ShortSource=error=""
+Encounter=EncounterTable=LocationTiers=Rolls=Table=c=[]
+n = '\n'
+num,xpTotal = 1,0
+encounter=[]
+gvars= load_json(get("DencEncounterSources") or '[]') or load_json(get_svar("DencEncounterSources") or '[]') or ["020cd16d-c806-4595-8e43-b63159ed0498"]
+
+for enc in gvars:
+   encounter=encounter+load_json(get_gvar(enc))['encounter']
+
+LocationList="\n_Location_ | _Tier(s)_ | _Source_\n"+"\n".join([x.loc + " | "+str(x.minTier)+(("-"+str(x.maxTier)) if not x.maxTier==x.minTier else '')+(" | "+ x.shortSource if 'shortSource' in x else '') for x in encounter])
+title="Dynamic Encounter Tool - Help"
+descStr=f"""An improved encounter tables tool - DEnc was developed to support quick and easy creation of encounter tables with all of the following features:
+- Multiroll encounters
+- Easy to follow format
+- Automatic `!battle` support
+- Non-combat Encounters with rolls
+- Easily handles multiple sources of tables
+- Roll by Location and Tier
+- View specific entries
+
+**Works With**
+- [Battle Planner Tool](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f)
+- `!battle` by _Derixyleth#0636_ | [Avrae Development Server](http://invite.avrae.io/)
+
+**Rolling Encounters**
+`!denc [entry] <location> <tier#> [entry #]`
+
+To roll on the Arctic Location Tier 1
+EX: `!denc arctic 1`
+
+To view a specific entry, simply add the following:
+EX: `!denc entry arctic 1 24`
+
+**Setting Tables to Use**
+DEnc uses a `svar` or `cvar` named `DencEncounterSources` to assign the sources for rolling.
+`!svar|cvar DencEncounterSources ["gvar1","gvar2"]`
+
+Will always use a Personal var if available, then Server, then it's default.
+
+**Changing the Tables**
+See [Workshop](https://avrae.io/dashboard/workshop/5f78f7774ded026d119cfeed)
+
+**Issues & Support Me**
+Quick Help [Discord](https://discord.gg/HczsFcY)
+You can file reports and feature requests on [GitHub](https://github.com/storytellermahkasad/Avrae-Customizations)
+If you want to tip: [Ko-fi](https://ko-fi.com/storytellermahkasad)"""
+foot="Use With: !denc [entry] <terrain> <tier> [entry #] | v3.0 Made by @Mahksad#5996"
+
+return (f'embed -title "{title}" -desc \"{descStr}\" -footer "{foot}"')
+</drac2>

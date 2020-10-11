@@ -21,4 +21,4 @@ Possible Integration with !map
 **Issues & Support Me**
 Quick Help [Discord](https://discord.gg/HczsFcY)
 You can file reports and feature requests on [GitHub](https://github.com/storytellermahkasad/Avrae-Customizations)
-If you want to tip: [Ko-fi](https://ko-fi.com/storytellermahkasad)
+If you want to tip: [Patreon](https://www.patreon.com/StorytellerMahkasad) or [Ko-fi](https://ko-fi.com/storytellermahkasad)

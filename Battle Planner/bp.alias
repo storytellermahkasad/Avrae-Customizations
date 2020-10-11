@@ -111,33 +111,26 @@ elif Mode[0] == 'view':
   if not RBattles[pick]: # No Entries
     return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__\n\nBattle has no monsters or commands.\nAddition of `new`, `edit`, `add`, and `remove` coming soon!" {foot}')
   # No problems, Go through the entries
-  entryOut=work=effects=""
+  work=entryOut=effectsOut=addsOut=""
   for entry in RBattles[pick]:
-    mod=""
-    # Handle only add|madd|effect right now
-    # Phase 2 will cover the rest
+    entryName = entryType = entryMod = effectName =""
     # Strip the init and type - !init <Type> <Code>
     entryType = entry.split(' ')[1]
     code=entry.replace('!init '+entryType+' ','').replace('!i '+entryType+' ','')
+
     # Check over the things that can add to init
-    if entryType == 'add':
-      # add| <modifier> <name> <args>
-      mod = code.split(' ')[0]
-      # Take out the Type and Mod
-      entryName = code.replace(mod+' ','').split(' -')[0]
-      # and then remove adv/dis from the name
-      entryName = entryName.replace(' adv','').replace(' dis', '')
-      # Finish strip and argparse it
-      work = argparse(code.replace(mod+' '+entryName+' ',''))
-    elif entryType == 'madd':
-      # madd| <name> <args>
+    if entryType == 'madd': # madd| <name> <args>
       # Remove adv/dis from the name
       entryName = code.split(' -')[0].replace(' adv','').replace(' dis', '')
-      # Finish strip and argparse it
-      code.replace(entryName+' ','')
-      work = argparse(code)
-    elif entryType == 'effect':
-      # effect| <target> <name> <args>
+      code = code.replace(entryName+' ','')
+    elif entryType == 'add': # add| <modifier> <name> <args>
+      entryMod = code.split(' ')[0]
+      # Take out the Type and Mod
+      entryName = code.replace(entryMod+' ','').split(' -')[0]
+      # and then remove adv/dis from the name
+      entryName = entryName.replace(' adv','').replace(' dis', '')
+      code = code.replace(entryMod+' '+entryName+' ','')     
+    elif entryType == 'effect': # effect| <target> <name> <args>
       sep = effectName = ''
       # Get if we are a "Wrapped String"
       if code.split(' -')[0] == '\'':
@@ -150,35 +143,59 @@ elif Mode[0] == 'view':
         entryName = code.split(' ')[0]
       code = code.replace(sep+entryName+sep+' ','')
       # Again for the Name of the Effect
-      sep=''
+      effectName = code.split(' -')[0]
+      code = code.replace(effectName+' ','')
+      entryName = f'\"{entryName} ({effectName})\"' 
+    elif entryType == 'note': # note| <name> <args>
+      sep = effectName = ''
       # Get if we are a "Wrapped String"
       if code.split(' -')[0] == '\'':
         sep = '\''
       elif code.split(' -')[0] == '\"':
         sep = '\"'
       if sep:
-        effectName = code.split(sep)[0]
+        entryName = code.split(sep)[0]
       else:
-        effectName = code.split(' ')[0]
-      code = code.replace(sep+effectName+sep+' ','')
-      entryName = f'\"{entryName} ({effectName})\"'
-      # Finish strip and argparse it
-      work = argparse(code)
-    else:
-      # We're skipping the other stuff
+        entryName = code.split(' ')[0]
+      code = code.replace(sep+entryName+sep+' ','')
+    elif entryType == 'opt' or entryType == 'opts': # opt,opts| <name> <args>
+      entryName = code.split(' ')[0]
+      code = code.replace(entryName+' ','')
+    #elif entryType == 'meta' or entryType == 'metaset': # meta,metaset| <args>
+      #Do Nothing here
+    else: # skip the rest for now
       continue
-    if not entryType == 'effect':
-      # Get all the madd|add Out
-      opts = ("\n*Name:* "+ work.join('name'," ") if work.get('name') else '') + ("\n*Num:* "+ work.last('n',None,str) if work.get('n') else '') + ("\n*Group:* "+ work.join('group'," ") if work.get('group') else '') + ("\n\n" if work.adv() or work.get('b') or work.get('p') or work.get('hp') or work.get('thp') or work.get('ac') else '') + ("*Adv:* "+("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + (" *-b:* "+ work.last('b',None,str) if work.get('b') else '') + (" *-p:* "+ (work.last('p',None,str) if not mod else str(mod)) if work.get('p') else '') + (" *HP:* "+ work.last('hp',None,str) if work.get('hp') else '') + (" *THP:* "+ work.last('thp',None,str) if work.get('thp') else '') + (" *AC:* "+ work.last('ac',None,str) if work.get('ac') else '') + ("\n" if work.get('h') or work.get('rollhp') else '') + ("*Not Hidden* " if work.get('h') else '') + ("*Roll for HP*" if work.get('rollhp') else '') + ("\n\n*Note:* "+ work.join('note'," ") if work.get('note') else '')
-      # Store the results
-      entryOut = entryOut + f'-f "\"{entryName}\""' + (f'"|{opts}" ' if opts else ' ')
-    else:
-      # Get all the effect Out
-      opts = (""+ work.join('attack'," ") if work.get('attack') else '')
-      # Store the results
-      entryOut = entryOut + f'-f "\"{entryName}\""' + (f'"|{opts}" ' if opts else ' ')
+    # Argparse it
+    work = argparse(code)
+    # Handle multiple number and group
+    entryName = entryName + (' (x'+work.last('n',None,str)+')' if work.get('n') else '') + (' ['+work.last('group')+']' if work.get('group') else '')
 
-  return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__" {entryOut} {foot}')
+    if entryType == 'madd':
+      if not entryOut:
+        entryOut = "\n**--Monsters--**"
+      # Get all the madd
+      opts = ("-name: "+ work.join('name'," ") if work.get('name') else '') + ("-h" if work.get('h') else '') + (("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + ("-b: "+ work.last('b',None,str) if work.get('b') else '') + ("-p: "+ (work.last('p',None,str) if not entryMod else str(entryMod)) if work.get('p') else '') + ("-hp: "+ work.last('hp',None,str) if work.get('hp') else '') + ("-thp: "+ work.last('thp',None,str) if work.get('thp') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '') + ("-rollhp" if work.get('rollhp') else '') + ("-note: "+ work.join('note'," ") if work.get('note') else '')
+      # Store the results
+      entryOut = entryOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
+
+    elif entryType == 'add':
+      if not addsOut:
+        addsOut = "\n**--Adds--**"
+      # Get all the add
+      opts = ("-controller: "+ work.last('controller') if work.get('controller') else '') + ("-h" if work.get('h') else '') + (("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + ("-p: "+ (work.last('p',None,str) if not entryMod else str(entryMod)) if work.get('p') else '') + ("-hp: "+ work.last('hp',None,str) if work.get('hp') else '') + ("-thp: "+ work.last('thp',None,str) if work.get('thp') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '') + ("-note: "+ work.join('note'," ") if work.get('note') else '') 
+      # Store the results      
+      addsOut = addsOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
+      
+    elif entryType == 'effect':
+      # Add the Effects Header
+      if not effectsOut:
+        effectsOut = "\n**--Effects--**"
+      # Get all the effect
+      opts = ("-parent: "+ work.join('parent'," ") if work.get('parent') else '') + ("conc: True" if work.get('conc') else '') + ("-t: "+ work.join('t',", ") if work.get('t') else '') + ("-attack: "+ work.join('attack'," ") if work.get('attack') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-sb: "+ work.last('sb',None,str) if work.get('sb') else '') + ("-b: "+ work.last('b',None,str) if work.get('b') else '') + ("-d: "+ work.last('d',None,str) if work.get('d') else '') + ("-dur: "+ work.last('dur',None,str) if work.get('dur') else '') + ("end: True " if work.get('end') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-neutral: "+ work.last('neutral') if work.get('neutral') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '')
+      # Store the results
+      effectsOut = effectsOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
+
+  return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__'+(f'{entryOut}' if entryOut else '')+(f'\n{addsOut}' if addsOut else '')+(f'\n{effectsOut}' if effectsOut else '')+f'" {foot}')
 
 
 elif Mode[0] == 'new':
