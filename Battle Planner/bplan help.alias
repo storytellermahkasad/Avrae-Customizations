@@ -1,0 +1,44 @@
+<drac2>
+Source=get('BattlePlanLoc', 'Battles')
+foot=f'-footer "!bplan help | Battle Source: {Source} | v1.0 Made by @Mahkasad#5996"'
+BP="Battle Planner"
+title=f'embed -title "{BP}"'
+
+return (f"""embed -title "{BP} - Help" -desc "The {BP} Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats. For more detailed help, simply use a command with no additional arguments.
+
+-- Using --
+`view <battlename>`
+Look at a specific battle
+
+`begin <battlename> <meta_args>`
+Start Initiative for a battle (Handles all arguments of `!i begin`)
+
+`end`
+End Initiative (Same as `!i end`)
+
+-- Editing --
+`new <battlename> [command]`
+Create a new battle plan. If no command provided, make an empty plan.
+
+`edit <battlename> <command #> <new command>`
+Edit an entry in a battle plan.
+
+`edit <battlename> <command #> <new command #>`
+Move an entry in a battle plan.
+
+`remove <battlename> <command #>`
+Remove an entry from a battle plan.
+
+-- Deleting --
+`delete <battlename>`
+Delete a single battle by name
+
+`clear confirm`
+Deletes all battles, but only if both commands are passed
+
+
+BPlan is compatible with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20) and `!battle` by _Derixyleth#0636_
+Currently BPlan is under development.
+
+See the [workshop](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f) for more details." {foot}""")
+</drac2>

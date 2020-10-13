@@ -4,15 +4,35 @@ Works fully with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f
 Can load encounters created with `!battle` by _Derixyleth#0636_
 
 **Features**
-`view <battlename>` - Look at a specific battle
-`begin <battlename>` - Start Initiative for a battle
-`end` - End Initiative (Same as !i end)
-`delete <battlename>` - Delete a single battle by name
-`clear confirm` - Deletes all battles, but only if both commands are passed
+-- Using --
+`view <battlename>`
+Look at a specific battle
 
-**In Progress**
-Creating New Battles in Tool
-Editing Existing Battles
+`begin <battlename> <meta_args>`
+Start Initiative for a battle (Handles all arguments of `!i begin`)
+
+`end`
+End Initiative (Same as `!i end`)
+
+-- Editing --
+`new <battlename> [command]`
+Create a new battle plan. If no command provided, make an empty plan.
+
+`edit <battlename> <command #> <new command>`
+Edit an entry in a battle plan.
+
+`edit <battlename> <command #> <new command #>`
+Move an entry in a battle plan.
+
+`remove <battlename> <command #>`
+Remove an entry from a battle plan.
+
+-- Deleting --
+`delete <battlename>`
+Delete a single battle by name
+
+`clear confirm`
+Deletes all battles, but only if both commands are passed
 
 **Future Features**
 Advanced format (XP, Reroll on Battle Being, etc)
