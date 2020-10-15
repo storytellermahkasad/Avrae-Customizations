@@ -1,0 +1,73 @@
+<drac2>  # Testing Data for BP
+Source=get('BattlePlanLoc', 'Battles')
+TESTDATA= dump_json({
+"Ambush": 
+[ 
+  "!init add 20 DM -p",
+  "!i madd goblin -n 4",
+  "!i madd Orc -n 1 -resist cold -group \"Reinforcements\" -resist fire",
+  "!i effect DM map -attack \"||Size: 26x14 ~ Background: https://i.imgur.com/O2tMCFC.jpg ~ Options: dc60\"",
+  "!i effect DM Example -ac 10",
+  "!i opts \"GO1\" -name \"Gobo1\"",
+  "!i note Gobo1 Location: b2 | Size: M | Color: r | Token: wtstw",
+  "!i note GO2 Location: d3 | Size: S | Color: y | Token: wtstw",
+  "!i note GO3 Location: f5 | Size: L | Color: g | Token: wtstw",
+  "!i note GO4 Location: g7 | Size: H | Color: b | Token: wtstw",
+  "!i note OR1 Location: k11 | Size: G | Color: w | Token: wtstw",
+  "!i metaset -name \"Cool Battle Name\"",
+  "!i metaset turnnotif",
+  "!i metaset deathdelete",
+  "!i metaset dyn",
+  "!i hp GO2 -5",
+  "!i next"
+],
+"Arctic T0 1":
+[
+    "!i madd \"Owl\" adv -b 1 -n 4 -name \"Frank#\" -h -group \"Tester\" -rollhp -thp 3 -ac 12 -note \"I am Frank\"",
+    "!i madd \"Giant Owl\" -p 10"
+],
+"Big":
+[
+  "!i madd goblin -group \"First\" -name GO01",
+  "!i madd goblin -group \"First\" -name GO02",
+  "!i madd goblin -group \"First\" -name GO03",
+  "!i madd goblin -group \"First\" -name GO04",
+  "!i madd goblin -group \"First\" -name GO05",
+  "!i madd goblin -group \"First\" -name GO06",
+  "!i madd goblin -group \"First\" -name GO07",
+  "!i madd goblin -group \"First\" -name GO08",
+  "!i madd goblin -group \"First\" -name GO09",
+  "!i madd goblin -group \"First\" -name GO10",
+  "!i madd goblin -group \"First\" -name GO11",
+  "!i madd goblin -group \"First\" -name GO12",
+  "!i madd goblin -group \"First\" -name GO13",
+  "!i madd goblin -group \"First\" -name GO14",
+  "!i madd goblin -group \"First\" -name GO15",
+  "!i madd goblin -group \"First\" -name GO16",
+  "!i madd goblin -group \"First\" -name GO17",
+  "!i madd goblin -group \"First\" -name GO18",
+  "!i madd goblin -group \"First\" -name GO19",
+  "!i madd goblin -group \"Second\" -name GO20",
+  "!i madd goblin -group \"Second\" -name GO21",
+  "!i madd goblin -group \"Second\" -name GO22",
+  "!i madd goblin -group \"Second\" -name GO23",
+  "!i madd goblin -group \"Second\" -name GO24",
+  "!i madd goblin -group \"Second\" -name GO25",
+  "!i madd goblin -group \"Second\" -name GO26",
+  "!i madd goblin -group \"Second\" -name GO27",
+  "!i madd goblin -group \"Second\" -name GO28",
+  "!i madd goblin -group \"Second\" -name GO29",
+  "!i madd goblin -group \"Second\" -name GO30",
+  "!i madd goblin -group \"Second\" -name GO31",
+  "!i madd goblin -group \"Second\" -name GO32",
+  "!i madd goblin -group \"Second\" -name GO33",
+  "!i madd goblin -group \"Second\" -name GO34",
+  "!i madd goblin -group \"Second\" -name GO35",
+  "!i madd goblin -group \"Second\" -name GO36",
+  "!i madd goblin -group \"Second\" -name GO37",
+  "!i madd goblin -group \"Second\" -name GO38",
+  "!i madd goblin -group \"Second\" -name GO39"
+]})
+set_uvar(Source, TESTDATA)
+return (f"""embed -title "Restored Test uvar to {Source}" """)
+</drac2>

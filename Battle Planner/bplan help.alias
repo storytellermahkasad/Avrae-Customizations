@@ -13,6 +13,9 @@ Look at a specific battle
 `begin <battlename> <meta_args>`
 Start Initiative for a battle (Handles all arguments of `!i begin`)
 
+`more`
+Continue adding entries to an initiative (When you have more commands than multiline handles)
+
 `end`
 End Initiative (Same as `!i end`)
 
@@ -23,7 +26,10 @@ Create a new battle plan. If no command provided, make an empty plan.
 `edit <battlename> <command #> <new command>`
 Edit an entry in a battle plan.
 
-`edit <battlename> <command #> <new command #>`
+`move <battlename> <command #> <new command #>`
+Move an entry in a battle plan.
+
+`rename <battlename> <new battlename>`
 Move an entry in a battle plan.
 
 `remove <battlename> <command #>`

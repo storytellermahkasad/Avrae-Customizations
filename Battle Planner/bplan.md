@@ -21,7 +21,7 @@ Create a new battle plan. If no command provided, make an empty plan.
 `edit <battlename> <command #> <new command>`
 Edit an entry in a battle plan.
 
-`edit <battlename> <command #> <new command #>`
+`move <battlename> <command #> <new command #>`
 Move an entry in a battle plan.
 
 `remove <battlename> <command #>`
