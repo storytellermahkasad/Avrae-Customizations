@@ -1,222 +1,997 @@
 <drac2> # Battle Planner
 args = &ARGS&
-out = ""
-plans=pick=""
-Commands = ["view","begin","end", "delete", "clear"]
-Source=get('BattlePlanLoc', 'Battles')
-RBattles = load_json(get(Source, '{}'))
-Battles = []
-foot=f'-footer "!bplan help | Battle Source: {Source} | v1.5 Made by @Mahksad#5996"'
-BP="Battle Planner"
-title=f'embed -title "{BP}"'
+strArgs = "&*&"
+
+# I hate it, but double-escape it keeps it functional
+newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
+
+# Alias Generic Variables
+AliasName = 'Battle Planner'
+Top_OptionsVarName = 'BattleToolOptions'
+OptionsVarName = 'BattlePlanner'
+LoadCheckName = 'BattleToolsLoadCheck'
+AliasPrefix = ctx.prefix
+AliasCommand = ctx.prefix+ctx.alias
+versionNumner = "2.35"
+version = "v"+versionNumner
+
+#Alias Specific Variables
+DefaultSourceList = list()
+DefaultSourceList.append("Battles")
+DefaultOutputName = "Battles"
+DefaultMoreName = "BattlesBeginMore"
+DefaultCacheName = "BattlePlannerCache"
+DefaultViewOverride = None
+DefaultMapAttach = 'DM'
+
+Mode = Display = PlanList = WPlanList = Pick = TryPick = ''
+Fuzzy = False
+RBattles, WBattles, RBattlePlans = load_json('{}'), load_json('{}'), load_json('[]')
+# Set Lists
+Commands = ["view","begin", "end", "delete", "clear", "new", "rename", "add", "remove", "edit", "move", "more", "p", "n", "options", "map"]
+Options = ["source", "output", "more", "page", "view"]
+SecondaryOptions = ["default"]
+ViewOptions = ["none", "view-pretty", "view-numeric"]
+MapAttaches = ["DM", "Map", "Lair"]
+argNamesSingle = ["ac","controller","desc","dur","hp","max","name","note","parent","thp"]
+argNamesSpecial = ["conc","end","h","rollhp"]
+argNamesMulti = ["attack","b","d","immune","neutral","resist","sb","t","vuln"]
+argNamesMeta = ["dyn", "turnnotif", "deathdelete"]
+argDescMeta = load_json('{"dyn": "Dynamic initiative; Rerolls all initiatves at the start of a round", "turnnotif": "Notifies the controller of the next combatant in initiative", "deathdelete": "Toggles removing monsters below 0 HP"}')
+argNamesMap = ["bg", "mapsize", "options", "objects", "walls", "view"]
+argDescMap = load_json('{"bg": "Background", "mapsize": "Size", "options": "Options", "objects": "Objects", "walls": "Walls", "view": "View"}')
+
+# Error Catching
+set_uvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
+
+if args: # Fall Back Commands - In case someone screws up
+  if args[0].lower() == 'fix':
+    delete_uvar(LoadCheckName) # Success Loading
+    return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
+
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+  if args[0].lower() == 'reset':
+    TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
+    TopOptionsVar.update(load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+    set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
+    delete_uvar(LoadCheckName) # Success Loading
+    return (f"""embed -title '{AliasName} - Reset' -desc "The {AliasName} Tool has done a reset of the `{OptionsVarName}` portion of the `{Top_OptionsVarName}` uvar. This should be done if the load uvars have been corrupted.
+
+    If the problem persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}` or contact me on my Discord.
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+  elif args[0].lower() == 'clear':
+    TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
+    OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+    OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
+    if not len(args) > 1 or not args[1]=='confirm': # Make sure 'clear confirm'
+      return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc You must specify a confirmation to clear all `{OutputName}` battles:
+      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+    else: # Wipe out the uvar
+      set_uvar(OutputName, "{}")
+      delete_uvar(LoadCheckName) # Success Loading
+      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in {OutputName} cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+
+if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
+  return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
+  This can happen because of a mangled battle plan or options var.
+  
+  If you are unsure what has happened try the following:
+  
+  **Check the Output File:**
+    `{AliasPrefix}uvar {DefaultOutputName}` - If you set a custom Output, change the name to that
+    If the file looks incorrect it will need to be fixed.
+  
+  **If you are unsure how to fix the output file:**
+    `{AliasCommand} clear confirm` - This will clear the Output file
+  
+  **If the problem persists:**
+    `{AliasCommand} reset` - This will reset the Options file
+  
+  **Advanced Users:**
+    Ensure that your input sources are correct.
+    If you modify something manually be sure to do `{AliasCommand} fix`
+    This will clear the failed load flag.
+
+  If the problem still persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}`
+  or contact me on my Discord (found in `{AliasCommand} help`).
+  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+
+# Get the Options
+TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+OptionsVarName+"\": {}"+"}"))
+OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+
+SourceName= OptionsVar.get('SourceLocation', DefaultSourceList)
+OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
+MoreOutputName= OptionsVar.get('MoreOutputLocation', DefaultMoreName)
+CacheOutputName = OptionsVar.get('PageCacheOutput', DefaultCacheName)
+
+# Source = get(SourceName)
+# Output = get(OutputName)
+MoreOutput= get(MoreOutputName)
+CacheOutput = get(CacheOutputName)
+ViewOverride = OptionsVar.get('ViewOverride', DefaultViewOverride)
+MapAttach = OptionsVar.get('MapAttach', DefaultMapAttach)
+if ViewOverride == 'none': # Catch an issue
+ ViewOverride = None
+
+if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, save them
+  OptionsVar.update(load_json('{\"SourceLocation\":'+dump_json(SourceName)+'}'))
+  OptionsVar.update(load_json('{\"OutputLocation\":'+dump_json(OutputName)+'}'))
+  OptionsVar.update(load_json('{\"MoreOutputLocation\":'+dump_json(MoreOutputName)+'}'))
+  OptionsVar.update(load_json('{\"PageCacheOutput\":'+dump_json(CacheOutputName)+'}'))
+  OptionsVar.update(load_json('{\"ViewOverride\":'+dump_json(ViewOverride)+'}'))
+  OptionsVar.update(load_json('{\"MapAttach\":'+dump_json(MapAttach)+'}'))
+  # Save to Top then save out Top
+  TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
+  set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
+
+for var in SourceName: # Load Sources
+  if get_gvar(var):
+    RBattles.update(load_json(get_gvar(var)))
+  elif get_svar(var):
+    RBattles.update(load_json(get_svar(var, '{}')))
+  else:
+    RBattles.update(load_json(get(var, '{}')))
+# Load the Output
+WBattles.update(load_json(get(OutputName,'{}')))
 
 # Assign the Mode
-Mode=[x for x in args if x.lower() in Commands]
-args.remove(args[0]) if args else ''
+if args:
+  m = args.pop(0)
+  strArgs = strArgs.replace(m,'',1).lstrip()
+  # Do exact and then fuzzy match on commands
+  Mode=[x for x in Commands if m.lower() == x]
+  if not Mode:
+    Mode=[x for x in Commands if m.lower() in x]
+  if Mode:
+    Mode = Mode[0]
 
+# Embed Ready
+desc = commandList = examples = selectIntruction = pagingInfo = ""
+fullCommand = f"""{AliasCommand}{' '+" ".join(&ARGS&) if &ARGS& else ''}"""
+title = AliasName+(" - "+Mode.capitalize() if Mode else '')
+attempted = "Attempted:"+newLine+"`"+fullCommand+"`"
+foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by Mahkasad#5996'"""
+
+if not (Mode=='p' or Mode=='n'): # Delete the Cache
+  delete_uvar(CacheOutputName)
+
+if args: # Pull out what is being tried
+  TryPick = args.pop(0)
+  for begins in [TryPick, sep+TryPick+sep, sepSingle+TryPick+sepSingle]:
+    if strArgs.startswith(begins):
+      strArgs = strArgs.replace(begins,'',1).lstrip()
+      break
+  TryPick = TryPick.lower()
 # Sort the Battles so we can get correct hits
 # I hate this. We also fuzzy match in reverse
 # This fixes the 'Arctic T1 82' 'Arctic T1 8' issue
 if RBattles:
-  Battles = list(RBattles)
-  for i in range(len(Battles)-1):
-    for j in range(i+1,len(Battles)):
-      if Battles[i]>Battles[j]:
-        temp = Battles[i]
-        Battles[i] = Battles[j]
-        Battles[j] = temp
-  for plan in Battles:
+  RBattlePlans = list(RBattles)
+  RBattlePlans.sort()
+  for plan in RBattlePlans:
     # Build the plan list
-    plans = plans + f'`\'{plan}\'`\n'
+    PlanList += "`"+sepSingle+plan.capitalize()+sepSingle+"`"+newLine
     # if we're doing something
     # exact match check
-    if args and args[0].lower() == plan.lower():
-      pick=plan
-    # if we're doing something
-    # fuzzy match check
-    # search backwards to handle 'B 8' 'B 82' issue
-    elif not pick and args:
-      for plan in Battles[::-1]:
-        if args and args[0].lower() in plan.lower():
-          pick=plan
+    if TryPick and TryPick == plan.lower():
+      Pick = plan
+  # if we're doing something
+  # fuzzy match check
+  # search backwards to handle 'B 8' 'B 82' issue
+  if not Pick:
+    for plan in RBattlePlans[::-1]:
+      if TryPick and TryPick in plan.lower():
+        Pick = plan
+        Fuzzy = True
 
-# Check for no inputs
-if not Mode or (not Mode[0] == 'new' and not Battles):
-  # No battles
-  if not plans:
-    return (f'{title} -desc "Select a Battle Plan:\nNo Battles Found. Add one with `!denc` or manually to `!uvar {Source}`.\nAddition of `new`, `edit`, `add`, and `remove` coming soon!" {foot}')
-  else:
-    return (f'{title} -desc "The Battle Planner Tool is designed for interacting with Avrae\'s Combat Initiative and simplify preparing combats.\n\nFor a list of commands see `!bplan help`\n\nSelect a Battle Plan:\n{plans}" {foot}')
+if WBattles: # Generate Working Battle List
+  WBattlePlans = list(WBattles)
+  WBattlePlans.sort()
+  for plan in WBattlePlans:
+    # Build the plan list
+    WPlanList += "`"+sepSingle+plan.capitalize()+sepSingle+"`"+newLine
 
-elif Mode[0] == 'end':
-  # End is simple, just call it
-  return (f'i end')
+# If we got to here, then they've loaded.
+delete_uvar(LoadCheckName) # Success Loading
 
-elif Mode[0] == 'clear':
+if not Mode and PlanList: # Check for no inputs
+  desc = "The Battle Planner Tool is designed for interacting with Avrae's Combat Initiative and simplify preparing combats."+newLine+newLine+"For a list of commands see `"+AliasCommand+" help`"+newLine+"To view a battle plan use: `"+AliasCommand+" view <battlename>`"
+  selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+if not PlanList and not (Mode == 'new' or Mode == 'clear' or Mode == 'options'): # No battles
+  title = AliasName
+  desc = "No Battles Found. Add one with `"+AliasCommand+" new`, `"+AliasPrefix+"denc`, or manually to: `"+AliasPrefix+"uvar "+",".join(SourceName)+"`."+newLine+newLine+"For a list of commands see `"+AliasCommand+" help`"
   
-  if not args or not args[0]=='confirm': # Make sure 'clear confirm'
-    return (f'embed -title "{BP} - Clear All Battles" -desc "You must specify a confirmation to clear all battles:\n`!bplan clear confirm`" {foot}')
-  else: # Wipe out the uvar
-    set_uvar(Source, "{}")
-    return (f'embed -title "{BP} - Clear All Battles" -desc "All Battles Cleared. Add more with `!denc`, `!battle`, or manually to {Source}" {foot}')
+  Display = ViewOverride if ViewOverride else 'view-pretty'
 
-elif Mode[0] == 'delete':
-  if not args:
-    return (f'embed -title "{BP} - Delete Battle" -desc "You must specify a Battle Name to Delete.\nSelect a Battle Plan:\n{plans}" {foot}')
-  if not pick:
-    return (f'embed -title "{BP} - Delete Battle" -desc "Battle `{args[0]}` Not Found\n{plans}" {foot}')
-  else:
-    plans = plans.replace(f'`\'{pick}\'`\n','',1)
-    RBattles.pop(pick)
-    set_uvar(Source, dump_json(RBattles))
-    return (f'embed -title "{BP} - Delete Battle" -desc "Battle Deleted: `{pick}`\n\nRemaing Battles:\n{plans}" {foot}')
-
-if Mode[0] == 'begin':
-  if not args: # No Battle Name Provided
-    return (f'embed -title "{BP} - Begin Battle" -desc "You must specify a Battle Name.\nSelect a Battle Plan:\n{plans}" {foot}')
-  if not pick:  # No Plan Found
-    return (f'embed -title "{BP} - Begin Battle" -desc "Battle `{args[0]}` Not Found\nSelect a Battle Plan:\n{plans}" {foot}')
-  if not RBattles[pick]: # No Entries
-      return (f'embed -title "{BP} - Begin Battle" -desc "__{pick}__\n\nBattle has no monsters or commands.\nAddition of `new`, `edit`, `add`, and `remove` coming soon!" {foot}')
+elif Mode == 'options':
+  # We clear this if we succeed
+  examples = "`"+AliasCommand+" "+Mode+" Source Battles Battles2`"+newLine+"`"+AliasCommand+" "+Mode+" View pretty`"+newLine+"`"+AliasCommand+" default Source` - For restoring a default option"+newLine+"`"+AliasCommand+" reset` - For restoring all defaults"
+  if not TryPick: # Just print them out
+    desc="Loaded options for the "+AliasName+"."+newLine+"To Change an option select the name and new command."
+    attempted = ""
+  else: # We're trying to make a change    
+    # Do exact match on option secondary command
+    comm=[x for x in SecondaryOptions if TryPick.lower() == x]
+    opt = select = ""
+    if comm and args:
+      comm = comm[0]
+      TryPick = args.pop(0)
+      strArgs = strArgs.replace(str(TryPick),'',1).lstrip()
+    # Do exact and then fuzzy match on option names
+    opt=[x for x in Options if TryPick.lower() == x]
+    if not opt:
+      opt=[x for x in Options if TryPick.lower() in x]
+    if opt and (args or comm):
+      opt = opt[0]
     
-  # Handle passing additional args to !i begin
-  bargs = " ".join(args)
-  # Prepare the complete set of commands
-  command = f'multiline\n!i begin {bargs}'
-  count = total = 0
-  limit = 19 # One less so we can store the more embed!
-  moreSet = []
-  for entry in RBattles[pick]:
-    count,total = count + 1, total + 1
-    if moreSet or count > limit:
-      if count > limit: # We're too big, store current more and add a new more
-        moreSet.append(moreCommand)      
-        moreCommand = entry
-      else: # Just add to the current more
-        moreCommand = moreCommand + "\n" + entry
-    else: # Still in size
-      command = command + "\n" + entry
-  # Store the More Commands if needed
-  if moreSet: # TODO Build the More Embed
-    moreName = f'BPlan_More_{pick}'
-    set_uvar(moreName,json_dump(moreSet))
-  # Call the Begin!
-  return command
+    if opt == 'view' and not comm: # Handle getting the view type from choices
+      tryFor = args.pop(0)
+      strArgs = strArgs.replace(str(tryFor),'',1).lstrip()
+      select=[x for x in ViewOptions if tryFor.lower() == x]
+      if not select:
+        select=[x for x in ViewOptions if tryFor.lower() in x]
+      if select:
+        select = select[0]
 
-elif Mode[0] == 'view':
-  if not args: # No Battle Name Provided
-    return (f'embed -title "{BP} - Battle Viewer" -desc "You must specify a Battle Name.\nSelect a Battle Plan:\n{plans}" {foot}')
-  if not pick: # No Plan Found
-    return (f'embed -title "{BP} - Battle Viewer" -desc "Battle `{args[0]}` Not Found\nSelect a Battle Plan:\n{plans}" {foot}')
-  if not RBattles[pick]: # No Entries
-    return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__\n\nBattle has no monsters or commands.\nAddition of `new`, `edit`, `add`, and `remove` coming soon!" {foot}')
-  # No problems, Go through the entries
-  work=entryOut=effectsOut=addsOut=""
-  for entry in RBattles[pick]:
-    entryName = entryType = entryMod = effectName =""
-    # Strip the init and type - !init <Type> <Code>
-    entryType = entry.split(' ')[1]
-    code=entry.replace('!init '+entryType+' ','').replace('!i '+entryType+' ','')
+    if (opt and strArgs) or (comm and opt) or (opt and select): # We found, work on it
+      if opt == "source":
+          prior = dump_json(SourceName)
+          SourceName = load_json('[]')
+          if comm:
+            SourceName = DefaultSourceList
+            strArgs = DefaultSourceList
+          else:
+            SourceName = [x for x in args]
+          OptionsVar['SourceLocation'] = SourceName
+      elif opt == "output":
+        prior = OutputName
+        if comm:
+          OutputName = DefaultOutputName
+          strArgs = DefaultOutputName
+        else:
+          OutputName = strArgs
+        OptionsVar['OutputLocation'] = OutputName
+      elif opt == "more":
+        prior = MoreOutputName
+        if comm:
+          MoreOutputName = DefaultMoreName
+          strArgs = DefaultMoreName
+        else:
+          MoreOutputName = strArgs
+        OptionsVar['MoreOutputLocation'] = MoreOutputName
+      elif opt == "page":
+        prior = CacheOutputName
+        if comm:
+          CacheOutputName = DefaultCacheName
+          strArgs = DefaultCacheName
+        else:
+          CacheOutputName = strArgs
+        OptionsVar['PageCacheOutput'] = CacheOutputName
+      elif opt == "view":
+        prior = ViewOverride
+        if comm:
+          ViewOverride = DefaultViewOverride
+          strArgs = 'None'
+        else:
+          ViewOverride = select if not select == 'none' else None
+      OptionsVar['ViewOverride'] = ViewOverride
+      #Save to Top then save Top
+      TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
+      set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
+      #Output Builder
+      title +=" - Updated"
+      desc = f"""Option: {opt.capitalize()} changed from `{prior}` to `{strArgs if not select else select.capitalize()}`."""
+      examples = ""
+      attempted = ""
+    else: # Didn't find an option
+      desc="Failed to find that option or provide a new setting."+newLine+"To Change an option select the name and new command."
 
-    # Check over the things that can add to init
-    if entryType == 'madd': # madd| <name> <args>
-      # Remove adv/dis from the name
-      entryName = code.split(' -')[0].replace(' adv','').replace(' dis', '')
-      code = code.replace(entryName+' ','')
-    elif entryType == 'add': # add| <modifier> <name> <args>
-      entryMod = code.split(' ')[0]
-      # Take out the Type and Mod
-      entryName = code.replace(entryMod+' ','').split(' -')[0]
-      # and then remove adv/dis from the name
-      entryName = entryName.replace(' adv','').replace(' dis', '')
-      code = code.replace(entryMod+' '+entryName+' ','')     
-    elif entryType == 'effect': # effect| <target> <name> <args>
-      sep = effectName = ''
-      # Get if we are a "Wrapped String"
-      if code.split(' -')[0] == '\'':
-        sep = '\''
-      elif code.split(' -')[0] == '\"':
-        sep = '\"'
-      if sep:
-        entryName = code.split(sep)[0]
-      else:
-        entryName = code.split(' ')[0]
-      code = code.replace(sep+entryName+sep+' ','')
-      # Again for the Name of the Effect
-      effectName = code.split(' -')[0]
-      code = code.replace(effectName+' ','')
-      entryName = f'\"{entryName} ({effectName})\"' 
-    elif entryType == 'note': # note| <name> <args>
-      sep = effectName = ''
-      # Get if we are a "Wrapped String"
-      if code.split(' -')[0] == '\'':
-        sep = '\''
-      elif code.split(' -')[0] == '\"':
-        sep = '\"'
-      if sep:
-        entryName = code.split(sep)[0]
-      else:
-        entryName = code.split(' ')[0]
-      code = code.replace(sep+entryName+sep+' ','')
-    elif entryType == 'opt' or entryType == 'opts': # opt,opts| <name> <args>
-      entryName = code.split(' ')[0]
-      code = code.replace(entryName+' ','')
-    #elif entryType == 'meta' or entryType == 'metaset': # meta,metaset| <args>
-      #Do Nothing here
-    else: # skip the rest for now
-      continue
-    # Argparse it
-    work = argparse(code)
-    # Handle multiple number and group
-    entryName = entryName + (' (x'+work.last('n',None,str)+')' if work.get('n') else '') + (' ['+work.last('group')+']' if work.get('group') else '')
+  optionsBody = f"""**Plan Source:** `{SourceName[0] if len(SourceName)==1 else SourceName}`{' | [Default: `'+DefaultSourceList[0]+'`]' if not SourceName == DefaultSourceList else ''}
+  **Plan Output:** `{OutputName}`{' | [Default: '+DefaultOutputName+']' if not OutputName == DefaultOutputName else ''}
+  **More Cache:** `{MoreOutputName}`{' | [Default: `'+DefaultMoreName+'`]' if not MoreOutputName == DefaultMoreName else ''}
+  **Page Cache:** `{CacheOutputName}`{' | [Default: `'+DefaultCacheName+'`]' if not CacheOutputName == DefaultCacheName else ''}
+  **View Override:** `{ViewOverride.capitalize() if ViewOverride else 'None'}`{' | [Default: `None`]' if not ViewOverride == None else ''}"""
 
-    if entryType == 'madd':
-      if not entryOut:
-        entryOut = "\n**--Monsters--**"
-      # Get all the madd
-      opts = ("-name: "+ work.join('name'," ") if work.get('name') else '') + ("-h" if work.get('h') else '') + (("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + ("-b: "+ work.last('b',None,str) if work.get('b') else '') + ("-p: "+ (work.last('p',None,str) if not entryMod else str(entryMod)) if work.get('p') else '') + ("-hp: "+ work.last('hp',None,str) if work.get('hp') else '') + ("-thp: "+ work.last('thp',None,str) if work.get('thp') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '') + ("-rollhp" if work.get('rollhp') else '') + ("-note: "+ work.join('note'," ") if work.get('note') else '')
-      # Store the results
-      entryOut = entryOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
+  optionsText = "**Option Values:**"+newLine+"`Source`: * - Any Uvar - Where to load the battle PlanList."+newLine+"`Output`: * - Any Uvar - Where to store the battle PlanList."+newLine+"`More` Cache: * - Any Uvar - Where to store the more cache."+newLine+"`Page` Cache: * - Any Uvar - Where to store the page cache."+newLine+"`View` Override: `None`|`Numeric`|`Pretty` - The viewmode to force."+newLine+newLine+"_Options with a * are Case Sensitive_"
 
-    elif entryType == 'add':
-      if not addsOut:
-        addsOut = "\n**--Adds--**"
-      # Get all the add
-      opts = ("-controller: "+ work.last('controller') if work.get('controller') else '') + ("-h" if work.get('h') else '') + (("dis" if work.adv()==-1 else "adv" if work.adv()==1 else '') if work.adv() else '') + ("-p: "+ (work.last('p',None,str) if not entryMod else str(entryMod)) if work.get('p') else '') + ("-hp: "+ work.last('hp',None,str) if work.get('hp') else '') + ("-thp: "+ work.last('thp',None,str) if work.get('thp') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '') + ("-note: "+ work.join('note'," ") if work.get('note') else '') 
-      # Store the results      
-      addsOut = addsOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
-      
-    elif entryType == 'effect':
-      # Add the Effects Header
-      if not effectsOut:
-        effectsOut = "\n**--Effects--**"
-      # Get all the effect
-      opts = ("-parent: "+ work.join('parent'," ") if work.get('parent') else '') + ("conc: True" if work.get('conc') else '') + ("-t: "+ work.join('t',", ") if work.get('t') else '') + ("-attack: "+ work.join('attack'," ") if work.get('attack') else '') + ("-ac: "+ work.last('ac',None,str) if work.get('ac') else '') + ("-sb: "+ work.last('sb',None,str) if work.get('sb') else '') + ("-b: "+ work.last('b',None,str) if work.get('b') else '') + ("-d: "+ work.last('d',None,str) if work.get('d') else '') + ("-dur: "+ work.last('dur',None,str) if work.get('dur') else '') + ("end: True " if work.get('end') else '') + ("-immune: "+ work.last('immune') if work.get('immune') else '') + ("-resist: "+ work.last('resist') if work.get('resist') else '') + ("-neutral: "+ work.last('neutral') if work.get('neutral') else '') + ("-vuln: "+ work.last('vuln') if work.get('vuln') else '')
-      # Store the results
-      effectsOut = effectsOut + f'\n• **{entryName}**' + (f'\n{opts} ' if opts else '')
+  return f"""embed -title "{title}" -desc "{desc}{attempted if attempted else ''}{newLine+newLine+optionsBody}{newLine+newLine+optionsText}{newLine+newLine+examples if examples else ''}" {foot}""" 
 
-  return (f'embed -title "{BP} - Battle Viewer" -desc "__{pick}__'+(f'{entryOut}' if entryOut else '')+(f'\n{addsOut}' if addsOut else '')+(f'\n{effectsOut}' if effectsOut else '')+f'" {foot}')
+elif Mode == 'end':
+  # End is simple, just call it
+  return (f"""i end""")
+  
+elif Mode == 'begin':
+  # Used by All
+  examples = "`"+AliasCommand+" "+Mode+" "+sepSlash+"Example Battle"+sepSlash+" <args>`"
+  
+  selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  Display = ViewOverride if ViewOverride else 'view-pretty'
 
-
-elif Mode[0] == 'new':
-  if not args: # No Battle Name Provided
-    return (f'embed -title "{BP} - Battle Creator" -desc "You must specify a Battle Name to create a battle.\nExisting Battle Plans:\n{plans}" {foot}')
-  if pick: # No Plan Found
-    return (f'embed -title "{BP} - Battle Creator" -desc "You have entered an existing battle plan. Did you mean `add`, `remove`, or `edit`?\n\n__{pick}__\nExisting Battle Plans:\n{plans}" {foot}')
-  else: # We've got a new battle, name it.
-    BName = args[0]
-    args.remove(args[0])
+  if not TryPick: # No Battle Name Provided
+    desc = "You must specify a Battle Name."
+  elif not Pick:  # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` Not Found"
+  elif not RBattles[Pick]: # No Entries
+    desc = "Battle `"+Pick+"` has no monsters or commands."
+  else: # No errors, prepare commands
+    # Handle passing additional args to i begin
     bargs = " ".join(args)
-    if args: # TODO Add the actual Args
-      code= f'\"{BName}\": [{bargs}]'
-    else: # Empty Battle. Make and Mention.
-      code= f'\"{BName}\": []'
-      outBattles = dump_json(RBattles)
-    # Ready to Store the Battle
-    if outBattles[-2]==']': # Adding to an existing Source
-        outBattles=outBattles.replace("]}","], "+(code)+"}", 1)
-        set_uvar(Source, outBattles)
-    else: # Adding to an empty Source
-        set_uvar(Source, "{"+code+"}")
-    return (f'embed -title "{BP} - Battle Creator" -desc "__{BName}__\n\nBattle created without monsters. Use `add` to add in monsters." {foot}')
+    # Prepare the complete set of commands
+    multiCommand = f"""multiline{newLine}"""
+    command = f"""{AliasPrefix}i begin {bargs}"""
+    count,total,moreCount = 2,0,1 # Two less so we can store the more embed
+    limit = 20
+    moreSet = load_json('[]')
+    MoreBattles = load_json('{}')
+    output=""
+    for entry in RBattles[Pick]:
+      count,total = count + 1, total + 1
+      if moreSet or MoreBattles or count > limit:        
+        if not moreSet: # FirstTime for this more, hit on count
+          if len(RBattles[Pick])-total == 0: # We fit in if no more embed
+            command += newLine + entry.replace(entry[0],AliasPrefix)
+          else: # Otherwise, start the more
+            count = 2
+            moreSet.append(entry)
+        elif count > limit: #Over limit
+          if len(RBattles[Pick])-total == 0:
+            moreSet.append(entry)
+          else:
+            MoreBattles.update(load_json('{\"'+plan+str(moreCount)+'\": '+dump_json(moreSet)+'}'))
+            moreSet, count = load_json('[]'), 1
+            moreCount += 1
+            moreSet.append(entry)
+        else: # Regular, store
+          moreSet.append(entry)
+      else: # Still in size
+        command += newLine + entry.replace(entry[0],AliasPrefix)
+    if MoreBattles or moreSet: # Store the More Commands if needed
+      if moreSet: # Final entry store
+        MoreBattles.update(load_json('{\"'+plan+str(moreCount)+'\": '+dump_json(moreSet)+'}'))
+      MoreBattles["timer"] = int(time()) + 20
+      MoreBattles["commandCount"] = total - 19
+
+      set_uvar(MoreOutputName,dump_json(MoreBattles))
+      # Append the More Dialog
+      moreEmbed = (f"""{AliasPrefix}embed -title "{AliasName} - More Battles" -desc "More Battles has been used due to there being more than `20` commands. (This includes `{AliasPrefix}i begin` and this message). When the current batch of commands finishes, call `{AliasCommand} more` to continue adding to initiative. There are `{MoreBattles["commandCount"]}` more commands in `{len(MoreBattles)-2}` batches." {foot}""")
+      multiCommand += moreEmbed + newLine
+    # Call the Begin
+    return multiCommand + command # moreEmbed[1:] #
+
+elif Mode == 'more':
+  # Read the More
+  MoreBattles = load_json(get(MoreOutputName, '{}'))
+  if not MoreBattles: # Handle Empty
+    return (f"""embed -title "{AliasName} - More Battle" -desc "There is not currently more battle plan to add to Initiative. Did you mean `{AliasCommand} begin`?
+          Attempted:{newLine}`{fullCommand}`" {foot}""")
+  if int(MoreBattles.timer) > int(time()): #Still on Cooldown
+    return (f"""embed -title "{AliasName} - More Battle" -desc "The `multiline` command is on cooldown for: `{int(MoreBattles.timer) - int(time())}` seconds. Please wait before calling {Mode} again.
+    
+    There are `{MoreBattles.commandCount}` more commands in `{len(MoreBattles)-2}` batches." {foot}""")
+  
+  # Take out the admin stuff
+  MoreBattles.pop("timer")
+  prior = MoreBattles.pop("commandCount")
+  # Get the keys in a list
+  entries = list(MoreBattles.keys())[0]
+  command = f"""multiline{newLine}"""
+  current = MoreBattles.pop(entries)
+  command += newLine.join(current)
+  # Call the commands
+  if MoreBattles: # More more remains
+    moreEmbed = (f"""{newLine}{AliasPrefix}embed -title "{AliasName} - More Battles" -desc "Commands Remain: `{newLine.join(MoreBattles.keys())}`" {foot}""")
+    MoreBattles["timer"] = time() + 20
+    MoreBattles["commandCount"] = prior - len(current)
+    command += moreEmbed
+    set_uvar(MoreOutputName,dump_json(MoreBattles))
+  else:
+    set_uvar(MoreOutputName,'{}')
+  return command # moreEmbed[1:] #
+
+elif Mode == 'new':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\"`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  selectIntruction = "Existing Battle Plans:"+newLine+PlanList
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to make a new battle."
+  elif Pick and not Fuzzy: # Plan already exists and is exact
+    desc = "Battle `"+TryPick.capitalize()+"` already exists."+newLine+"Did you mean `add`, `remove`, `move`, `rename`, or `edit`?"
+  else: # We've got a new battle, name it.
+    BName = TryPick.strip(sepSingle+sepSlash+sep)
+    # Do the replace
+    editBattles = load_json('[]')
+    if not args:
+      desc = "Battle created without monsters. Use `add` to add in monsters."
+    else:
+      strArgs = strArgs.strip()
+      if strArgs[0] == sep:
+        strArgs = strArgs.replace(sep,'',1)
+        strArgs = strArgs[::-1].replace(sep,'',1)[::-1]
+      desc = "Battle Created with entry: `"+strArgs.replace(sep,sepSlash)+"`"
+      editBattles.append(strArgs)
+    # Store and Save
+    WBattles.update(load_json('{\"'+BName+'\": '+dump_json(editBattles)+'}'))
+    RBattles.update(load_json('{\"'+BName+'\": '+dump_json(editBattles)+'}'))
+    # Save out
+    set_uvar(OutputName, dump_json(WBattles))
+    Pick = BName
+    # Wipe because we succeded
+    attempted = ""
+    examples = ""
+    selectIntruction = ""
+
+elif Mode == 'delete':
+  # Output things used by all
+  examples = "`"+AliasCommand+" "+Mode+" "+sepSlash+"Example Battle"+sepSlash+"`"
+  
+  selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+  if not TryPick: # Put nothing -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to Delete."
+  elif not Pick: # Not Found
+    desc = "Battle `"+TryPick.capitalize()+"` Not Found"
+  else:
+    if not Pick in WBattles: # Not in the working set      
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        examples = ""
+    else: # Success
+      PlanList = PlanList.replace(f"""`\'{Pick.capitalize()}\'`{newLine}""",'',1)
+      WBattles.pop(Pick)
+      # RBattles.pop(Pick) # We don't do this so we can display what was deleted
+      set_uvar(OutputName, dump_json(WBattles))
+      desc = "Battle Deleted: `"+Pick.capitalize()+"`"
+      # Clear these because success
+      examples = ""
+      attempted = ""
+      selectIntruction = ""
+
+elif Mode == 'rename':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples ="`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" Battle 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" Super Cool Battle`"
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to rename a battle."
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  else: # We've got an existing battle, rename it.
+    if not args: # You must have more to get here. No adding empty
+      desc = "You must specify a new name to rename a battle."
+      selectIntruction = ""
+    else:
+      if not Pick in WBattles: # Editing with Multi-Source
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        examples = ""
+      else:
+        # Ready to Store the Modified Battle
+        strArgs = strArgs.strip(sepSingle+sepSlash+sep)
+        editBattles = WBattles[Pick]
+        WBattles.pop(Pick)
+        RBattles.pop(Pick)
+        WBattles.update(load_json('{\"'+strArgs+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+strArgs+'\": '+dump_json(editBattles)+'}'))
+        # Save out
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build
+        desc = "Renamed Battle from:"+newLine+"`"+Pick.capitalize()+"` => `"+strArgs.capitalize()+"`"
+        Pick = strArgs
+        # Wipe because we succeded
+        attempted = ""
+        examples = ""
+        selectIntruction = ""
+
+elif Mode == 'add':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i effect OG1 bulk -ac +10`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to edit a battle."
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  else: # We've got an existing battle, add to it.
+    if not args: # You must have more to get here. No adding empty
+      desc = "You must specify a command to add to a battle."
+      selectIntruction = ""
+    else:
+      if not Pick in WBattles: # Editing with Multi-Source
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        examples = ""
+      else: # Ready to Store the Modified Battle
+        editBattles = WBattles[Pick]
+        strArgs = strArgs.strip()
+        if strArgs[0] == sep:
+          strArgs = strArgs.replace(sep,'',1)
+          strArgs = strArgs[::-1].replace(sep,'',1)[::-1]
+        editBattles.append(strArgs)
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        # Save out
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build
+        desc = "Added entry `"+strArgs.replace(sep,sepSlash)+"`"
+        # Wipe because we succeded
+        attempted = ""
+        examples = "" 
+        selectIntruction = ""
+
+elif Mode == 'edit':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 0 "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 5 "+AliasPrefix+"i effect OG1 bulk -ac +10`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 3 "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  Display = ViewOverride if ViewOverride else 'view-numeric'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to edit a battle."
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  elif not RBattles[Pick]: # Empty Battle
+    desc = "Battle `"+TryPick.capitalize()+"` is empty."+newLine+"Did you mean `add`?"
+  else: # We've got an existing battle, edit it.
+    editBattles = RBattles[Pick]
+    if not len(args) > 1 or not args[0].isdigit() or int(args[0]) > len(editBattles)-1: # You must have more to get here. No adding empty
+      desc = "You must specify a numbered command to edit and a new command to edit a battle."
+      selectIntruction = ""
+    else:
+      if not Pick in WBattles: # Editing with Multi-Source
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        examples = ""
+      else:
+        # Ready to Modify the selected entry
+        selected = int(args.pop(0))
+        strArgs = strArgs.replace(str(selected),'',1).lstrip()
+        if selected == None or selected < 0: # Not enough info provided
+          desc = "You must specify a numbered command to move and a numbered new position to edit a battle."
+          selectIntruction = ""
+        # Do the replace
+        entry = editBattles[selected]
+        strArgs = strArgs.strip()
+        if strArgs[0] == sep:
+          strArgs = strArgs.replace(sep,'',1)
+          strArgs = strArgs[::-1].replace(sep,'',1)[::-1]
+        editBattles[selected] = strArgs
+        # Store and Save
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build
+        desc = "Command `"+str(selected)+"`:`"+entry.replace(sep,sepSlash)+"` modified to `"+strArgs.replace(sep,sepSlash)+"`."
+        # Wipe because we succeded
+        attempted = ""
+        examples = "" 
+        selectIntruction = ""
+
+elif Mode == 'remove':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 1` to remove command `1`"
+  Display = ViewOverride if ViewOverride else 'view-numeric'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to edit a battle."
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  elif not RBattles[Pick]: # Empty Battle
+    desc = "Battle `"+TryPick.capitalize()+"` is empty."+newLine+"Did you mean `add`?"
+  else: # We've got an existing battle, modify it.
+    editBattles = RBattles[Pick]
+    if not args or not args[0].isdigit() or int(args[0]) > len(editBattles)-1: # Check Args
+      desc = "You must specify a numbered command to remove an entry in a battle."
+      selectIntruction = ""
+    else:      
+      if not Pick in WBattles: # Editing with Multi-Source
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        examples = ""
+      else: # Ready to Remove the selected entry
+        selected = int(args.pop(0))
+        strArgs = strArgs.replace(str(selected),'',1).lstrip()
+        
+        # Do the remove
+        entry = editBattles.pop(selected)
+        # Store and Save
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build        
+        desc = "Command `"+str(selected)+"`:`"+entry.replace(sep,sepSlash)+"` removed."
+        # Wipe because we succeded
+        attempted = ""
+        examples = "" 
+        selectIntruction = ""
+
+elif Mode == 'move':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 0 2` to move command `0` to slot `2`"
+  Display = ViewOverride if ViewOverride else 'view-numeric'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to edit a battle."
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  elif not RBattles[Pick]: # Empty Battle
+    desc = "Battle `"+TryPick.capitalize()+"` is empty."+newLine+"Did you mean `add`?"
+  else: # We've got an existing battle, add to it.
+    editBattles = RBattles[Pick]
+    selected = newPos = None
+    if not args or not args[0].isdigit() or not len(args) > 1 or int(args[0]) > len(editBattles)-1: # Check Args
+      desc = "You must specify a numbered command to remove an entry in a battle."
+      selectIntruction = ""
+    else:      
+      # Make sure we've got enough arguments
+      args = strArgs.split(' ')
+      if(args[0].isdigit() and args[1].isdigit):
+        # Ready to Remove the selected entry
+        selected = int(args.pop(0))
+        strArgs = strArgs.replace(str(selected),'',1).lstrip()
+        newPos = int(args.pop(0))
+        strArgs = strArgs.replace(str(selected),'',1).lstrip()
+    if selected == None or newPos == None or selected < 0: # Not enough info provided
+      desc = "You must specify a numbered command to move and a numbered new position to edit a battle."
+      selectIntruction = ""
+    else: # Success
+      if not Pick in WBattles: # Editing with Multi-Source
+        # Output Build
+        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
+        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+      else: # Do the move        
+        entry = editBattles[selected]
+        editBattles.pop(selected)
+        # Check for newPos at end or more
+        if newPos >= len(editBattles):
+          editBattles.append(entry)
+          newPos = len(editBattles)-1
+        elif newPos < 0:
+          editBattles.insert(0, entry)
+          newPos = 0
+        else:
+          editBattles.insert(newPos, entry)
+        # Store and Save
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build
+        desc = "Command `"+str(selected)+"`:`"+sepSlash+entry.replace(sep,sepSlash)+sepSlash+"` moved to `"+str(newPos)+"`."
+        # Wipe because we succeded
+        attempted = ""
+        examples = "" 
+        selectIntruction = ""
+
+elif Mode == 'map':
+  # Cover Output that's always true
+  title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
+  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" set`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" set [-bg] [-mapsize] [-options] [-objects] [-walls] [-view]`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" clear`"
+  Display = ViewOverride if ViewOverride else 'view-numeric'
+  selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
+
+  if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]`"+newLine+"`[-mapsize <XxY size>]`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-view <view>]`"
+  elif not Pick: # No Plan Found
+    desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  else: # We've got an existing battle, edit it.
+    editBattles = RBattles[Pick]
+    if not args:
+      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]`"+newLine+"`[-mapsize <XxY size>]`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-view <view>]`"
+      selectIntruction = ""
+    elif not Pick in WBattles: # Editing with Multi-Source
+      # Output Build
+      desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `!"+AliasCommand+" options source <NewSource>`"
+      selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+      examples = ""
+    else:
+      if args[0] == 'set': # Add Map notes
+        strArgs = strArgs.replace(args[0],'',1).lstrip()
+        args.pop(0)
+        rez=0
+        # Find the prefix and entry
+        for prefix in MapAttaches:
+          editBattles[:] = (value for value in editBattles if not ((value.startswith('!i add ') or value.startswith('!init add ')) and value.endswith((prefix+' -p',prefix))))
+          editBattles[:] = (value for value in editBattles if not (value.startswith('!i effect '+prefix+' map -attack') or value.startswith('!init effect '+prefix+' map -attack')))
+
+        # Ready to Map the selected entry
+        outCommand = ""
+        result = ""
+        mapCommands = ""
+        offset = 0
+        # Parse the commands
+        work = argparse(args)
+        mapCommands += [f"""{argDescMap[x]}: {work.join(x,slash)} ~""" for x in argNamesMap if work.get(x)]
+        
+        mapCommands = " ".join(mapCommands)
+        mapCommands = mapCommands[::-1].replace('~ ', '', 1)[::-1]
+
+        outCommand = '!i add 100 '+MapAttach+' -p'
+        result += '`'+outCommand+'`'+newLine
+        editBattles.insert(offset, outCommand)
+
+        if mapCommands:
+          mapCommands = "!i effect "+MapAttach+" map -attack \"||" + mapCommands+"\""
+          editBattles.insert(offset+1, mapCommands)
+          result += '`'+mapCommands.replace(sep, sepSlash)+'`'
+
+        # Store and Save
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        set_uvar(OutputName, dump_json(WBattles))
+
+        # Output Build
+        desc = ("Map Information Stored: "+newLine+result if result else 'No Map Information Provided to Store.')
+        # Wipe because we succeded
+        attempted = ""
+        examples = ""
+        selectIntruction = ""
+
+      elif args[0] == 'clear': # Remove the map notes
+        strArgs = strArgs.replace(args[0],'',1).lstrip()
+        args.pop(0)
+        result = ""
+
+        # Find the prefix and entry
+        for prefix in MapAttaches:
+          editBattles[:] = (value for value in editBattles if not ((value.startswith('!i add ') or value.startswith('!init add ')) and value.endswith((prefix+' -p',prefix)) or (value.startswith('!i effect '+prefix+' map -attack') or value.startswith('!init effect '+prefix+' map -attack'))))
+
+        # Store and Save
+        WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
+        set_uvar(OutputName, dump_json(WBattles))
+        # Output Build
+        desc = "Map Information cleared"+(":"+newLine+result if result else '.')
+        # Wipe because we succeded
+        attempted = ""
+        examples = "" 
+        selectIntruction = ""
+      else:
+        desc = "You must specify `set` or `clear` to modify a map."
+        selectIntruction = ""
+
+elif Mode == 'n' or Mode == 'p':
+  CommandStore= load_json(get('BattlePlannerCache', '{}'))
+  if not CommandStore:
+    # Cover Output that's always true
+    title = AliasName+" - More Display"
+    desc = "There is currently no cache to page through."+newLine+"Run a command that has multiple pages first to use this interface"
+
+    return f"""embed -title "{title}" -desc "{desc}{newLine+newLine+attempted if attempted else ''}"  {foot}"""
+
+  else:
+    if Mode == 'n':
+      if CommandStore['CurrentPage'] < CommandStore['PageCount']:
+        CommandStore['CurrentPage'] = CommandStore['CurrentPage'] + 1
+    else:
+      if CommandStore['CurrentPage'] > 1:
+        CommandStore['CurrentPage'] = CommandStore['CurrentPage'] - 1
+    
+    set_uvar(CacheOutputName,dump_json(CommandStore))
+    
+    pagingInfo = "**Page:** "+str(CommandStore['CurrentPage'])+"/"+str(CommandStore['PageCount'])+" `"+AliasCommand+" [n|p] Next|Previous Page`"
+
+    for entry in load_json(CommandStore['Pages'][CommandStore['CurrentPage']-1]):
+      commandList += entry.replace(sepSlash, sep)
+
+    return f"""embed -title "{CommandStore['Title']}" -desc "{CommandStore['InfoBefore']}{pagingInfo+newLine+newLine+commandList}{CommandStore['InfoAfter']}"  {foot}"""
+
+if Mode == 'view' or Display == 'view-pretty':
+  # Used By View
+  failed = False # Catches view specific issues
+  work = entryOut = effectsOut = addsOut = notesOut = optsOut = metaOut = extraOut = finalName = ""
+  if not Display == 'view-pretty': # Handle only our errors, not fall-throughs
+    title = AliasName+" - Battle Viewer"
+  if not TryPick: # No Battle Name Provided
+    failed = True
+    if not Display == 'view-pretty':
+      desc="You must specify a Battle Name."
+      selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  elif not Pick: # No Plan Found
+    failed = True
+    if not Display == 'view-pretty':
+      desc="Battle `"+TryPick.capitalize()+"` Not Found"
+      selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  elif not Pick in RBattles: # No Entries
+    failed = True
+    if not Display == 'view-pretty':
+      desc="Battle has no monsters or commands."+newLine+"Add one with `"+AliasCommand+" add`"
+      selectIntruction = ""
+
+  if not failed: # No problems or not view mode, Go through the entries
+    if not Display: # We're viewing
+      attempted = ""
+    hasName = ["add", "madd", "opt", "opts", "note", "effect"]
+    for entry in RBattles[Pick]:
+      entryName = entryType = addMod = effectName = ''
+      # Strip the init and type - init <Type> <Code>
+      entryType = entry.split(' ')[1]
+      # Some of the commands have no additional info
+      code=entry.replace(f"""{AliasPrefix}init {entryType}""",'',1).replace(f"""{AliasPrefix}i {entryType}""",'',1).lstrip()
+
+      # add| <modifier> <name> <args>
+      # meta,metaset| <args> -- Ignore this one
+      # madd| <name> <args>
+      # opt,opts| <name> <args>
+      # note| <name> <args>
+      # effect| <target> <name> <args>
+      # Pull out the Modifier for add
+      if entryType == 'add':
+        addMod = code.split(' ')[0]
+        code = code.replace(f"""{addMod} """,'', 1)
+      # Find the Entry Name
+      if entryType in hasName:
+        zeroSep = ''
+        if code[0] == sepSingle or code[0] == sep:
+          zeroSep = code[0]
+        if zeroSep: # Go ahead and extract and strip either way
+          entryName = code.split(zeroSep)[1].strip(r'\"\'')
+        else:
+          entryName = code.split(' ')[0]
+        code = code.replace(f"""{zeroSep+entryName+zeroSep} """,'', 1)
+      if entryType == 'effect': # Get the Effect Name too
+        if code[0] == sepSingle or code[0] == sep:
+          zeroSep = code[0]
+        # If we are wrapped, go ahead and extract and strip
+        if zeroSep:
+          effectName = code.split(zeroSep)[1].strip(r'\"\'')
+        else:
+          effectName = code.split(' ')[0]
+        code = code.replace(f"""{zeroSep+effectName+zeroSep} """,'', 1)
+      # Argparse it
+      work = argparse(code)
+      # Handle multiple number (-n)|group|place at (-p)
+      # Only append x# if -n more than 1
+      entryName = f"""{entryName}{' (x'+work.last('n',None,str)+')' if work.get('n') and work.last('n',None,int) > 1 else ''}{' ['+work.last('group')+']' if work.get('group') else ''}{' {'+(work.last('p',None,str) if not addMod else str(addMod))+'}' if work.get('p') else ''}{(' DIS' if work.adv()==-1 else ' ADV' if work.adv()==1 else '')}"""
+
+      # Extract all relevant args
+      opts = [f"""-{x}: {work.last(x,None,str)}""" for x in argNamesSingle if work.get(x)]
+      opts += [f"""-{x}""" for x in argNamesSpecial if work.get(x)]
+      opts += [f"""-{x}: {work.join(x,', ')}""" for x in argNamesMulti if work.get(x)]
+      opts += [f"""-{x}: {argDescMeta[x]}""" for x in argNamesMeta if work.get(x)]
+      opts = " ".join(opts)
+      # Handle special stuff
+      if entryType == 'madd':
+        if not entryOut:
+          entryOut = f"""{newLine}**--Monsters--**"""
+        # Store the results
+        entryOut += f"""{newLine}• **{entryName}**{newLine + opts if opts else ''}"""
+      elif entryType == 'add':
+        if not addsOut:
+          addsOut = f"""{newLine}**--Placeholders--**"""
+        # Store the results
+        addsOut += f"""{newLine}• **{entryName}**{': ' + opts if opts else ''}"""
+      elif entryType == 'effect':
+        # Add the Effects Header
+        if not effectsOut:
+          effectsOut = f"""{newLine}**--Effects--**"""
+        # Store the results
+        effectsOut += f"""{newLine}• **{entryName}** {': ' + opts if opts else ''}"""
+      elif entryType == 'opt' or entryType == 'opts':
+        # Add the Notes Header
+        if not optsOut:
+          optsOut = f"""{newLine}**--Battlewide Opts--**"""
+        # Store the results
+        optsOut += f"""{newLine}• **{entryName}**{': ' + code if code else ''}"""
+      elif entryType == 'note':
+        # Add the Notes Header
+        if not notesOut:
+          notesOut = f"""{newLine}**--Extra Notes--**"""
+        # Store the results
+        notesOut += f"""{newLine}• **{entryName}**: {code if code else ''}"""
+      elif entryType == 'meta' or entryType == 'metaset':
+        # Add the Meta Header
+        if not metaOut:
+          metaOut = f"""{newLine}**--Battlewide Meta--**"""
+        # Store the results
+        metaOut += f"""{newLine+opts if opts else ''}"""
+        # If there's meta to change the name, display it up top too.
+        if work.get('name'):
+          finalName = f"""{Pick} - {work.last('name',None,str)}"""
+      else: # thp, hp, move, goto, next, n, others
+          if not extraOut:
+            extraOut = f"""{newLine}**--Other Commands--**"""
+          # Store the results
+          extraOut += f"""{newLine}• {'**'+entryName+'**: ' if entryName else ''}**{entryType}** {code if code else ''}"""
+  if Mode == 'view' and ViewOverride == 'view-numeric': # We want to view, but in numeric
+    Mode = 'view-numeric'
+  else:
+    # Allows for others to use view code  
+    if finalName: # Handle Special View Names
+      Pick = finalName
+    # Build our Output
+    desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+"__"+Pick.capitalize()+"__" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine + addsOut.replace('|',pipeSlash) if addsOut else ''}{newLine + effectsOut.replace('|',pipeSlash) if effectsOut else ''}{newLine + optsOut.replace('|',pipeSlash) if optsOut else ''}{newLine + notesOut.replace('|',pipeSlash) if notesOut else ''}{newLine + metaOut.replace('|',pipeSlash) if metaOut else ''}{newLine + extraOut.replace('|',pipeSlash) if extraOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
+    #.replace(sep,sepSlash).replace(sepSingle,sepSingleSlash).replace(sepSingleSlash, sepSingle)
+
+    if len(desctemp) <= 2048: # We're under limit - Do the display
+      return f"""embed -title '{title}' -desc '{desctemp}' {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}"""
+    else: # Over Limit - Paging Time
+      Mode = 'view-numeric'
+
+if Mode == 'view-numeric' or Display == 'view-numeric':
+  failed = False # Catches view specific issues
+  commandOut = ""
+  if not Display == 'view-numeric': # Handle only our errors, not fall-throughs
+    title = AliasName+" - Battle Viewer"
+  if not TryPick: # No Battle Name Provided
+    failed = True
+    if not Display == 'view-numeric':
+      desc="You must specify a Battle Name."
+      selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  elif not Pick: # No Plan Found
+    failed = True
+    if not Display == 'view-numeric':
+      desc="Battle `"+TryPick.capitalize()+"` Not Found"
+      selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  elif not RBattles[Pick]: # No Entries
+    failed = True
+    if not Display == 'view-numeric':
+      desc="Battle has no monsters or commands."+newLine+"Add one with `"+AliasCommand+" add`"
+      selectIntruction = "Select a Battle Plan:"+newLine+PlanList
+  if not failed:
+    if not Display: # We're viewing
+      attempted = ""
+      desc = "__"+Pick.capitalize()+"__"
+    # Paging stuff
+    Battles = RBattles[Pick]
+    commandList = newLine.join(['`'+str(i)+'`: '+x.replace(sep, sepSlash) for (i,x) in enumerate(Battles)])
+    CommandSplit = commandList.splitlines(True)
+    baseMessage= (f"""embed -title "{title}" -desc "{desc}
+        Selected Battle Plan: `{Pick}`{newLine+'Attempted:'+newLine+'`'+fullCommand+'`' if attempted else ''}
+
+        Commands:
+        {newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}" {foot}""")
+    baseMessageSize = len(baseMessage)
+
+    if len("".join(CommandSplit))+baseMessageSize > 2048: # Needs to be split up
+      workCommand = CommandSplit
+      pagingInfoSize = 70
+      CommandStore = load_json('{}')
+      Pages = load_json('[]')
+      splitAt = 20
+      while workCommand:
+        while(len("".join(workCommand[:splitAt]))+baseMessageSize+pagingInfoSize > 2048):
+          splitAt = splitAt - 1
+        Pages.append(dump_json(workCommand[:splitAt]))
+        workCommand = workCommand[splitAt:splitAt+20]
+        splitAt = 20
+      # Now write out the cache, display the first page
+      commandOut = "".join(load_json(Pages[0]))
+      CommandStore['Title'] = title
+      CommandStore['InfoBefore'] = desc+newLine+"Selected Battle Plan: `"+Pick+"`"+(newLine+newLine+attempted if attempted else '')+newLine+newLine+"Commands:"+newLine
+      CommandStore['InfoAfter'] = (newLine+newLine+"Examples:"+newLine+examples if examples else '')+(newLine+newLine+selectIntruction if selectIntruction else '')
+      CommandStore['PageCount'] = int(len(Pages))
+      CommandStore['CurrentPage'] = 1
+      
+      CommandStore.update(load_json('{\"Pages\": '+dump_json(Pages)+'}'))
+      set_uvar(CacheOutputName,dump_json(CommandStore))
+
+      pagingInfo = "**Page:** 1/"+str(CommandStore.get('PageCount'))+" `"+AliasCommand+" [n|p] Next|Previous Page`"
+    else:
+      commandOut = commandList
+  return (f"""embed -title "{title}" -desc "{desc}{newLine+newLine+attempted if attempted else ''}{newLine+newLine+"Commands:" if commandOut else ''}{newLine+pagingInfo+newLine if pagingInfo else ''}{newLine+commandOut.replace('|',pipeSlash) if commandOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}" {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}""")
 </drac2>
