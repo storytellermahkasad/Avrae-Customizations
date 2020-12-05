@@ -1,0 +1,321 @@
+<drac2> # Inventory Management
+args = &ARGS&
+strArgs = "&*&"
+
+# I hate it, but double-escape it keeps it functional
+newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
+
+# Alias Generic Variables
+AliasName = 'Inventory Management'
+Top_OptionsVarName = 'InventoryOptions'
+OptionsVarName = 'Inventory'
+LoadCheckName = 'InventoryLoadCheck'
+AliasPrefix = ctx.prefix
+AliasCommand = ctx.prefix+ctx.alias
+HelpCommand = AliasCommand+' help'
+versionNumber = "0.1"
+version = "v"+versionNumber
+foot = f"-footer '{HelpCommand} | {version} Made by Mahkasad#5996'"
+helpT = f"For a list of commands see `{HelpCommand}`"
+
+#Alias Specific Variables
+DataDefaultSourceList = list()
+DataDefaultSourceList.append("DatasList")
+DefaultOutputName = "Inventory"
+DefaultCacheName = "InventoryCache"
+DefaultViewOverride = None
+
+Mode = Display = ValList = Pick = TryPick = ''
+Fuzzy = False
+RValues, RValueList, DataList = load_json('{}'), load_json('[]'), load_json('{}')
+# Set Lists
+# Commands = ["view", "delete", "clear", "new", "rename", "add", "remove", "edit", "move", "more", "p", "n", "options"]
+Commands = ["view", "new", "delete", "clear", "rename", "p", "n", "options"]
+Options = ["source", "output", "page", "view"]
+SecondaryOptions = ["default"]
+ViewOptions = ["none", "view-pretty"]
+
+# Error Catching
+set_cvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
+if args: # Fall Back Commands - In case someone screRValues up
+  if args[0].lower() == 'fix':
+    delete_cvar(LoadCheckName) # Success Loading
+    return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
+
+    {helpT}" {foot}""")
+  if args[0].lower() == 'reset':
+    TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
+    TopOptionsVar.update(load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+    set_cvar(Top_OptionsVarName, dump_json(TopOptionsVar))
+    delete_cvar(LoadCheckName) # Success Loading
+    return (f"""embed -title '{AliasName} - Reset' -desc "The {AliasName} Tool has done a reset of the `{OptionsVarName}` portion of the `{Top_OptionsVarName}` cvar. This should be done if the load cvars have been corrupted.
+
+    If the problem persists try doing a `{AliasPrefix}cvar delete {Top_OptionsVarName}` or contact me on my Discord.
+    {helpT}" {foot}""")
+  elif args[0].lower() == 'clear':
+    TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
+    OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+    OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
+    if not len(args) > 1 or not args[1]=='confirm': # Make sure 'clear confirm'
+      return (f"""embed -title "{AliasName} - Clear All Containers" -desc "You must specify a confirmation to clear all containers:
+      `{AliasCommand} clear confirm`" {foot}""")
+    else: # Wipe out the cvar
+      set_cvar(OutputName, "{}")
+      delete_cvar(LoadCheckName) # Success Loading
+      return (f"""embed -title '{AliasName} - Clear All Containers' -desc "All Containers are cleared. Add more with `{AliasCommand} new`"  {foot}""")
+if False: #int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
+  return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
+  This can happen because of a mangled Container or options var.
+  
+  If you are unsure what has happened try the following:
+  
+  **Check the Output File:**
+    `{AliasPrefix}cvar {DefaultOutputName}` - If you set a custom Output, change the name to that
+    If the file looks incorrect it will need to be fixed.
+  
+  **If you are unsure how to fix the output file:**
+    `{AliasCommand} clear confirm` - This will clear the Output file
+  
+  **If the problem persists:**
+    `{AliasCommand} reset` - This will reset the Options file
+  
+  **Advanced Users:**
+    Ensure that your item sources are correct.
+    If you modify something manually be sure to do `{AliasCommand} fix`
+    This will clear the failed load flag.
+
+  If the problem still persists try doing a `{AliasPrefix}cvar delete {Top_OptionsVarName}`
+  or contact me on my Discord (found in `{HelpCommand}`).
+  {helpT}"  {foot}""")
+
+# Get the Options
+TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+OptionsVarName+"\": {}"+"}"))
+OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+
+#Alias Specific Options
+DataSourceName = OptionsVar.get('DataSourceLocation', DataDefaultSourceList)
+OutputName = OptionsVar.get('OutputLocation', DefaultOutputName)
+CacheOutputName = OptionsVar.get('PageCacheOutput', DefaultCacheName)
+
+#DataSource = get(DataSourceName)
+#Output = get(OutputName)
+CacheOutput = get(CacheOutputName)
+ViewOverride = OptionsVar.get('ViewOverride', DefaultViewOverride)
+if ViewOverride == 'none': # Catch an issue
+ ViewOverride = None
+
+if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, save them
+  OptionsVar.update(load_json('{\"DataSourceLocation\":'+dump_json(DataSourceName)+'}'))
+  OptionsVar.update(load_json('{\"OutputLocation\":'+dump_json(OutputName)+'}'))
+  OptionsVar.update(load_json('{\"PageCacheOutput\":'+dump_json(CacheOutputName)+'}'))
+  OptionsVar.update(load_json('{\"ViewOverride\":'+dump_json(ViewOverride)+'}'))
+  # Save to Top then save out Top
+  TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
+  set_cvar(Top_OptionsVarName, dump_json(TopOptionsVar))
+
+for var in DataSourceName: # Load Data Sources
+  if get_gvar(var):
+    DataList.update(load_json(get_gvar(var)))
+  elif get_svar(var):
+    DataList.update(load_json(get_svar(var, '{}')))
+  else:
+    DataList.update(load_json(get(var, '{}')))
+# Load the Output
+RValues.update(load_json(get(OutputName,'{}')))
+
+# Assign the Mode
+if args:
+  m = args.pop(0)
+  strArgs = strArgs.replace(m,'',1).lstrip()
+  # Do exact and then fuzzy match on commands
+  Mode=[x for x in Commands if m.lower() == x]
+  if not Mode:
+    Mode=[x for x in Commands if m.lower() in x]
+  if Mode:
+    Mode = Mode[0]
+
+# Embed Ready
+desc = commandList = examples = selectIntruction = pagingInfo = ""
+fullCommand = f"""{AliasCommand}{' '+" ".join(&ARGS&) if &ARGS& else ''}"""
+title = AliasName+(" - "+Mode.capitalize() if Mode else '')
+attempted = "Attempted:"+newLine+"`"+fullCommand+"`"
+# foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by Mahkasad#5996'"""
+
+if not (Mode=='p' or Mode=='n'): # Delete the Cache
+  delete_cvar(CacheOutputName)
+
+if args: # Pull out what is being tried
+  TryPick = args.pop(0)
+  for begins in [TryPick, sep+TryPick+sep, sepSingle+TryPick+sepSingle]:
+    if strArgs.startswith(begins):
+      strArgs = strArgs.replace(begins,'',1).lstrip()
+      break
+  TryPick = TryPick.lower()
+
+# Sort so we can get correct hits
+# I hate this. We also fuzzy match in reverse
+# This fixes the 'Arctic T1 82' 'Arctic T1 8' issue
+if RValues:
+  RValueList = list(RValues)
+  RValueList.sort()
+  for container in RValueList:
+    # Build the list
+    ValList += f"`{sepSingle}{container.capitalize()}{sepSingle}`{newLine}"
+    # if we're doing something
+    # exact match check
+    if TryPick and TryPick == container.lower():
+      Pick = container
+  # if we're doing something
+  # fuzzy match check
+  # search backwards to handle 'B 8' 'B 82' issue
+  if not Pick:
+    for container in RValueList[::-1]:
+      if TryPick and TryPick in container.lower():
+        Pick = container
+        Fuzzy = True
+
+# If we got to here, then they've loaded.
+delete_cvar(LoadCheckName) # Success Loading
+
+if not Mode and ValList: # Check for no inputs
+  desc = f"""The {AliasName} Tool is designed for managing player inventories. It utilizes templates and a number of options to simplify storing items in Containers.
+  
+  {helpT}"""
+  selectIntruction = "Select a Container:"+newLine+ValList
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+if not ValList and not (Mode == 'new' or Mode == 'clear' or Mode == 'options'): # No containers
+  title = AliasName
+  desc = f"""No Containers Found. Add one with `{AliasCommand} new`
+  
+  {helpT}"""
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+elif Mode == 'new':
+  # Cover Output that's always true
+  title = f"{AliasName} - Container Editor ({Mode.capitalize()})"  
+  examples = f"""`{AliasCommand} {Mode} "Backpack"`"""
+  selectIntruction = f"""Existing Containers:{newLine+ValList}"""
+  # Display Mode
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+  if not TryPick: # No Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Container name to make a new Container."
+  elif Pick and not Fuzzy: # Container already exists and is exact
+    desc = f"""Container `{TryPick.capitalize()}` already exists.
+    Did you mean `add`, `remove`, `move`, `rename`, or `edit`?"""
+  else: # We've got a new Container, name it.
+    Name = TryPick.strip(sepSingle+sepSlash+sep)
+    # Do the replace
+    edit = load_json('[]')
+    # Store and Save
+    RValues.update(load_json('{\"'+Name+'\": '+dump_json(edit)+'}'))
+    # Save out
+    set_cvar(OutputName, dump_json(RValues))
+    Pick = Name
+    # Update Description
+    desc = f"Container {Name} created. Use `add` to add items."
+    # Wipe because we succeded
+    attempted = ""
+    examples = ""
+    selectIntruction = ""
+
+elif Mode == 'delete':
+  # Cover Output that's always true
+  title = f"{AliasName} - Container Editor ({Mode.capitalize()})"
+  examples = f"""`{AliasCommand} {Mode} "Backpack"`"""
+  selectIntruction = f"""Existing Containers:{newLine+ValList}"""
+  # Display Mode
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+  if not TryPick: # Put nothing -- TUTORIAL HERE
+    desc = "You must specify a Container Name to Delete."
+  elif not Pick: # Not Found
+    desc = f"Container `{TryPick.capitalize()}` Not Found"
+  else: # Success  
+    ValList = ValList.replace(f"""`\'{Pick.capitalize()}\'`{newLine}""",'',1)
+    TempHold = RValues[Pick]
+    # Save out
+    RValues.pop(Pick)
+    set_cvar(OutputName, dump_json(RValues))
+    # Readd So we can display what was deleted
+    RValues.update(load_json('{\"'+Pick+'\": '+dump_json(TempHold)+'}'))
+    desc = f"Container Deleted: `{Pick.capitalize()}`"
+    # Clear these because success
+    examples = ""
+    attempted = ""
+    selectIntruction = ""
+
+elif Mode == 'rename':
+  # Cover Output that's always true
+  title = f"{AliasName} - Container Editor ({Mode.capitalize()})"
+  examples = f"""`{AliasCommand} {Mode} "Backpack" "Belt Pouch"`"""
+  selectIntruction = f"""Existing Containers:{newLine+ValList}"""
+  # Display Mode
+  Display = ViewOverride if ViewOverride else 'view-pretty'
+
+  if not TryPick: # No Name Provided -- TUTORIAL HERE
+    desc = "You must specify a Container name to rename a Container."
+  elif not Pick: # No Plan Found
+    desc = " `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
+  else: # We've got an existing , rename it.
+    if not args: # You must have more to get here. No adding empty
+      desc = "You must specify a new name to rename a Container."
+      selectIntruction = ""
+    else:
+      # Ready to Store the Modified 
+      strArgs = strArgs.strip(sepSingle+sepSlash+sep)
+      edits = RValues[Pick]
+      RValues.pop(Pick)
+      RValues.update(load_json('{\"'+strArgs+'\": '+dump_json(edits)+'}'))
+      # Save out
+      set_cvar(OutputName, dump_json(RValues))
+      # Output Build
+      desc = f"Renamed from:{newLine}`{Pick.capitalize()}` => `{strArgs.capitalize()}`"
+      Pick = strArgs
+      # Wipe because we succeded
+      attempted = ""
+      examples = ""
+      selectIntruction = ""
+
+if Mode == 'view' or Display == 'view-pretty':
+  # Used By View
+  failed = False # Catches view specific issues
+  work = entryOut = finalName = ""
+  if not Display == 'view-pretty': # Handle only our errors, not fall-throughs
+    title = AliasName+" - Inventory Viewer"
+  if not TryPick: # No Container Name Provided
+    failed = True
+    if not Display == 'view-pretty':
+      desc="You must specify a Container Name."
+      selectIntruction = "Select a Container:"+newLine+ValList
+  elif not Pick: # No Plan Found
+    failed = True
+    if not Display == 'view-pretty':
+      desc="Container `"+TryPick.capitalize()+"` Not Found"
+      selectIntruction = "Select a Container:"+newLine+ValList
+  elif not Pick in RValues: # No Entries
+    failed = True
+    if not Display == 'view-pretty':
+      desc="Container has no items."+newLine+"Add one with `"+AliasCommand+" add`"
+      selectIntruction = ""
+
+  if not failed: # No problems or not view mode, Go through the entries
+    if not Display: # We're viewing
+      attempted = ""
+
+  if Mode == 'view' and ViewOverride == 'view-numeric': # We want to view, but in numeric
+    Mode = 'view-numeric'
+  else:
+    # AlloRValues for others to use view code  
+    if finalName: # Handle Special View Names
+      Pick = finalName
+    # Build our Output
+    desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+"__"+Pick.capitalize()+"__" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
+
+    if len(desctemp) <= 2048: # We're under limit - Do the display
+      return f"""embed -title '{title}' -desc '{desctemp}' {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}"""
+    else: # Over Limit - Paging Time
+      Mode = 'view-numeric'
+
+</drac2>
