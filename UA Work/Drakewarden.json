@@ -1,0 +1,11 @@
+https://critterdb.com/#/publishedbestiary/view/5f99fd33f9101e03eeafe3d0
+
+e2cdb767-d61f-46be-9f2a-9a2157a1e0c7
+[{
+ "Class":"Ranger",
+ "subclass":"Drakewarden",
+ "counters":[
+  {"name":"Drake Companion","level":3,"value":1,"reset":"long","display":"bubble","classLevel":"RangerLevel"},
+  {"name":"Drakes Breath","level":11,"value":1,"reset":"long","display":"bubble","classLevel":"RangerLevel"}
+ ]
+ }]

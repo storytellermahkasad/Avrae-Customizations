@@ -1,0 +1,56 @@
+<drac2> #Drakewarden
+args=&ARGS&
+cvarName="DrakeCompanionEssence"
+lvl=character().levels.get('Ranger')
+Essence=Imp=Lrg=LvlRange =""
+title=f"{name} Looks to Summon A Drake"
+fail=f"{name} Failed to Summon A Drake"
+types=["acid","cold","fire","lightning","poison"]
+foot=f"{ctx.prefix+ctx.alias} [essence] <flight|swim> | By Mahkasad#5996"
+desc="Your Drake is ready:\n"
+help=f"""Failed to find a drake. 
+Attempted: `{" ".join(args) if args else 'None'}`
+Types: `{('`,`').join([x for x in types])}`"""
+notRanger="\n\nYou are not a Ranger."
+noImp="\n\nYou must specify `flight` or `swim` for an improved drake."
+
+if not args or not lvl:
+  title=fail
+  return f"""embed -title "{title}" -desc "{help}{notRanger if not lvl else ''}" -footer "{foot}" """
+
+Essence=[x for x in types if args[0].lower() in x]
+if not Essence:
+  title=fail
+  return f"""embed -title "{title}" -desc "{help}" -footer "{foot}" """
+else:
+  Essence=Essence[0]
+
+if lvl >= 7:
+  if len(args)<2:
+    title=fail
+    return f"""embed -title "{title}" -desc "{help+noImp}" -footer "{foot}" """
+  else:
+    Imp=[x for x in ["flight","swim"] if args[1].lower() in x]
+    if not Imp:
+      title=fail
+      return f"""embed -title "{title}" -desc "{help+noImp}" -footer "{foot}" """
+    else:
+      Imp=f" - Improved ({Imp[0].title()})"
+
+if lvl >= 15:
+  Lrg=" - Large"
+
+# Find the actual level range to use
+LvlRange="("+("1-4" if lvl < 5 else "5-8" if lvl < 7 else "7-8" if lvl < 9 else "9-12" if lvl < 13 else "13-16" if lvl < 15 else "15-16" if lvl < 17 else "17-20")+")"
+drakeStr=f"""Drake Companion{Lrg if Lrg else ''}{Imp if Imp else ''} - {Essence.title()} {LvlRange}"""
+hpStr=f"-hp {5+(lvl*5)}"
+character().set_cvar(cvarName,Essence)
+
+return f"""embed -title "{title}" -desc "{desc}`"\"\\\"{drakeStr}\"\\\""`
+
+For spawning in initiative:
+`"\"\\\"{drakeStr}\"\\\"" {hpStr}`
+
+For the `infused` strikes:
+`{cvarName}` set to `{Essence}`" -footer "{foot}" """
+</drac2>
