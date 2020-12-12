@@ -1,0 +1,125 @@
+<drac2>
+#assign args
+args = &ARGS&
+strArgs = "&*&"
+n = '\n'
+# Prebuilt Ammo Types
+AmmoTypes = Enhancements = OtherTypes = []
+AmmoTypes = load_json(get_svar('serverAmmoTypes') if get_svar('serverAmmoTypes') else '{"Arrow": 0.5, "Crossbow Bolt": 0.5, "Bullet": 0.5, "Needle": 0.5, "Handaxe": 1, "Javelin": 1, "Spear": 1, "Dagger": 1, "Light Hammer": 1, "Trident": 1, "Dart": 1, "Net": 1}')
+Enhancements = load_json(get_svar('serverAmmoEnhancements') if get_svar('serverAmmoEnhancements') else '["", "+1","+2","+3","+4"]')
+OtherTypes = load_json(get_svar('serverAmmoOther') if get_svar('serverAmmoOther') else '[""]')
+
+selectedType = selectedBonus = ""
+# Pull ammo type, or create and complain
+set_cvar_nx('AmmoInfo', dump_json(load_json('{\"Loaded\": \"\", \"Bags\": \"worn\", \"Used\": [], \"Fired\": []}')))
+# If there's no ammo at all, everything misses
+Info = load_json(AmmoInfo)
+store_bag = load_json(bags)
+
+title = "Ammunition Tracking"
+help = f"""For tracking ammunition taken directly from your inventory.
+`!ammo load <ammotype>` - Load a type of ammo by exact name
+`!ammo bag <bagName>` - Pick a source bag for your ammo
+`!ammo collect` - Pick up ammo after a fight
+`ammo`- Snippet for attacking
+
+**Always use one attack at a time while using** `ammo`"""
+stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
+**Ammo Source**: `{Info.Bags}`
+**Fired Ammo**:
+{n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+foot = f"""{ctx.prefix+ctx.alias} | Ammo Tracking | Made by Mahkasad#5996"""
+adds = "-color <color> -thumb <image>"
+
+if not args: # View fired ammo and help
+  return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
+
+elif args[0] == 'bag' and len(args)>1:
+  strArgs = strArgs.replace('bag ','', 1) # Strip the chosen mode
+  strArgs = strArgs.strip("\"") # get rid of quotes
+  selected = [b for b in store_bag if strArgs.lower() == b[0].lower()]
+  
+  if not selected:
+    selected = [b for b in store_bag[::-1] if strArgs.lower() in b[0].lower()]
+  
+  if not selected:
+    return f"""embed -title '{title}' -desc 'Could not find `{strArgs}`. Check your inventory to ensure it exists.{n+n+help+n+n+stat}' -footer '{foot}' {adds}"""
+  Info['Bags'] = selected[0][0]
+  set_cvar('AmmoInfo', dump_json(Info))
+  stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
+  **Ammo Source**: `{Info.Bags}`
+  **Fired Ammo**:
+  {n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+  return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
+
+elif args[0] == 'collect':
+  args.pop(0) # Strip the chosen mode
+  discard = args and args[0] == 'discard'
+  Used = Info.Used
+  # Get the bag
+  bagName = Info.Bags
+  ammo_bags = [x for x in store_bag if x[0] == bagName]
+
+  if not ammo_bags:
+    err(f"**Ammunition Tracking**: {bagName} not found. (use `!bag` to check your inventory there).")
+
+  if not Used:
+    return f"""embed -title '{title}' -desc '{name} has no ammo to collect.{n+n+stat}' -footer '{foot}' {adds}"""
+
+
+  # add the ammo from the first ammo bag
+  ammo_bag = ammo_bags[0][1]
+  ammoList = ""
+  for ammo in Used:
+    restore = ammo.amount
+    for val in AmmoTypes.keys():
+      if val == ammo.name:
+        restore = floor(ammo.amount * AmmoTypes[val])
+        break
+    # calculate return amount from list
+    ammo_bag.update(load_json('{"'+ammo.name+'": '+str(restore+ammo_bag.get(ammo.name,0))+'}'))
+    # append to info
+    ammoList += f"{n if ammoList else ''}{ammo.name}: {restore} | {ammo.amount} > {ammo_bag[ammo.name]}"
+  # Save out the bag changes
+  set_cvar("bags", dump_json(store_bag))
+  Info.update(load_json('{"Used": []}'))
+  set_cvar('AmmoInfo', dump_json(Info))
+  return f"""embed -title '{title}' -desc '{name} collects their ammo.{n}(Collected | Used > Remain):{n+ammoList+n+n+stat}' -footer '{foot}' {adds}"""
+
+elif args[0] == 'load':
+  if not len(args)>1:
+    return f"""embed -title 'Ammunition Tracking' -desc 'Choose the ammo type to load. Valid ammo types are in the format:{n}`<Enhancement> [Ammo] <Other>`{n}Items in <> are optional.{n+n}Valid Ammo Types:{n}{"Enhancements: `"+(", ".join(Enhancements[1::]))+"`"+n if Enhancements else ''}{"Ammo: `"+", ".join(AmmoTypes.keys())+"`"+n}{"Other: `"+(", ".join(OtherTypes[1::]))+"`" if OtherTypes else ''}' -footer '{foot}' {adds}"""
+  test = ""
+  strArgs = strArgs.replace('load ','', 1) # Strip the chosen mode
+  strArgs = strArgs.strip("\"") # get rid of quotes
+  for bonus in Enhancements:
+    for val in AmmoTypes.keys():
+      for other in OtherTypes:
+        if strArgs.lower() == f"""{bonus.lower()+' ' if bonus else ''}{val.lower()}{' '+other.lower() if other else ''}""":
+          selectedType = f"""{bonus+' ' if bonus else ''}{val}{' '+other if other else ''}"""
+          selectedBonus = bonus.lstrip('+')
+          break
+  if not selectedType:
+    for bonus in Enhancements[::-1]:
+      for val in AmmoTypes.keys():
+        for other in OtherTypes:
+          if strArgs.lower() in f"""{bonus.lower()+' ' if bonus else ''}{val.lower()}{' '+other.lower() if other else ''}""":
+            selectedType = f"""{bonus+' ' if bonus else ''}{val}{' '+other if other else ''}"""
+            selectedBonus = bonus.lstrip('+')
+            break
+ 
+  if not selectedType:
+    desc = f""""""
+    return f"""embed -title 'Ammunition Tracking' -desc 'Ammo type {strArgs} not found. Valid ammo types are in the format:{n}`<Enhancement> [Ammo] <Other>`{n}Items in <> are optional.{n+n}Valid Ammo Types:{n}{"Enhancements: `"+(", ".join(Enhancements[1::]))+"`"+n if Enhancements else ''}{"Ammo: `"+", ".join(AmmoTypes.keys())+"`"+n}{"Other: `"+(", ".join(OtherTypes[1::]))+"`" if OtherTypes else ''}' -footer '{foot}' {adds}"""
+
+  Info['Loaded'] = selectedType
+  Info['Enhancement'] = selectedBonus
+  set_cvar('AmmoInfo', dump_json(Info))
+  stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
+  **Ammo Source**: `{Info.Bags}`
+  **Fired Ammo**:
+  {n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+  return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
+else:
+  return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
+</drac2>

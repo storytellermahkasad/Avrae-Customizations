@@ -1,0 +1,60 @@
+<drac2>
+# Pull ammo type, or create and complain
+set_cvar_nx('AmmoInfo', dump_json(load_json('{\"Loaded\": \"\", \"Enhancement\": \"\", \"Bags\": \"worn\", \"Used\": [], \"Fired\": []}')))
+# If there's no ammo at all, everything misses
+Info = load_json(AmmoInfo)
+if not (ammo_name := Info.Loaded):
+ err(f""""**Ammunition Tracking:** No Ammo Loaded. Load ammo with `!ammo load <ammo_type>`" """)
+
+bagN = Info.Bags
+ammo_names=[ammo_name, ammo_name+'s']
+store_bag = load_json(bags)
+ammo_bags = [(b[1],sum([b[1].get(n,0) for n in ammo_names])) for b in store_bag if b[0].lower() == bagN.lower()]
+
+# count the ammo in the ammo bags
+ammo_bags = [(b,a) for (b,a) in ammo_bags if a>0]
+total_remaining = sum([q for (_,q) in ammo_bags])
+
+if total_remaining < 1:
+  err(f"**Ammunition Tracking**: There are not enough {ammo_name.lower()}s left in your equipment {bagN} (use `!bag {bagN}` to check your inventory there).")
+
+# Get Fired/Used
+Fired = Info.Fired
+Used = Info.Used
+ammo_fired = [x for x in Info.Fired if x.name == ammo_name]
+ammo_used = [x for x in Info.Used if x.name == ammo_name]
+
+if ammo_fired:
+ ammo_fired = ammo_fired[0]
+ Fired.remove(ammo_fired)
+else:
+ ammo_fired = load_json('{"name": "'+ammo_name+'", "amount": 0}')
+if ammo_used:
+ ammo_used = ammo_used[0]
+ Used.remove(ammo_used)
+else:
+ ammo_used = load_json('{"name": "'+ammo_name+'", "amount": 0}')
+
+# remove the ammo from the first ammo bag
+ammo_bag = ammo_bags[0][0]
+for ammo in ammo_names:
+ if remaining:=ammo_bag.get(ammo,0):
+  remaining-=1
+  total_remaining-=1
+  ammo_used['amount'] += 1
+  ammo_fired['amount'] += 1
+  if remaining:
+    ammo_bag[ammo]=remaining
+  else:
+    ammo_bag.pop(ammo)
+  break
+# Save out the changes to the ammo
+set_cvar("bags", dump_json(store_bag))
+store_bag = "BAD"
+Used.append(ammo_used)
+Fired.append(ammo_fired)
+Info.update(load_json('{"Used": '+dump_json(Used)+', "Fired": '+dump_json(Fired)+'}'))
+set_cvar('AmmoInfo', dump_json(Info))
+bonus = Info.Enhancement
+return f"""{'magical -b '+bonus+' -d '+bonus if bonus else ''} -f "{ammo_name}s Remaining in {bagN}|{total_remaining}" """
+</drac2>

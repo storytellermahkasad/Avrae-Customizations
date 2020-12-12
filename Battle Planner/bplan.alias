@@ -39,7 +39,8 @@ argNamesMulti = ["attack","b","d","immune","neutral","resist","sb","t","vuln"]
 argNamesMeta = ["dyn", "turnnotif", "deathdelete"]
 argDescMeta = load_json('{"dyn": "Dynamic initiative; Rerolls all initiatves at the start of a round", "turnnotif": "Notifies the controller of the next combatant in initiative", "deathdelete": "Toggles removing monsters below 0 HP"}')
 argNamesMap = ["bg", "mapsize", "options", "objects", "walls", "view"]
-argDescMap = load_json('{"bg": "Background", "mapsize": "Size", "options": "Options", "objects": "Objects", "walls": "Walls", "view": "View"}')
+argDescMap = {"options": ("Options",""), "objects": ("Objects","/"), "walls": ("Walls","/"), "fow": ("FOW",", ")}
+argSingleDescMap = load_json('{"bg": "Background", "mapsize": "Size", "view": "View"}')
 
 # Error Catching
 set_uvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
@@ -695,13 +696,13 @@ elif Mode == 'map':
   selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
 
   if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
-    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]`"+newLine+"`[-mapsize <XxY size>]`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-view <view>]`"
+    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
   elif not Pick: # No Plan Found
     desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
   else: # We've got an existing battle, edit it.
     editBattles = RBattles[Pick]
     if not args:
-      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]`"+newLine+"`[-mapsize <XxY size>]`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-view <view>]`"
+      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
       selectIntruction = ""
     elif not Pick in WBattles: # Editing with Multi-Source
       # Output Build
@@ -725,8 +726,9 @@ elif Mode == 'map':
         offset = 0
         # Parse the commands
         work = argparse(args)
-        mapCommands += [f"""{argDescMap[x]}: {work.join(x,slash)} ~""" for x in argNamesMap if work.get(x)]
-        
+        mapCommands += [f"""{argDescMap[x][0]}: {work.join(x,argDescMap[x][1])} ~""" for x in argDescMap.keys() if work.get(x)]
+        mapCommands += [f"""{argSingleDescMap[x]}: {work.last(x)} ~""" for x in argSingleDescMap.keys() if work.last(x)]
+
         mapCommands = " ".join(mapCommands)
         mapCommands = mapCommands[::-1].replace('~ ', '', 1)[::-1]
 
