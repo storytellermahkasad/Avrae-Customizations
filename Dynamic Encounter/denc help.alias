@@ -4,7 +4,7 @@ parsed = argparse(arguments)
 mode,Source,Location,z = 'default','No Encounter Source Found!','',"\\\""
 tN=sText=sEnc=sRolls=sName=sCode=Creator=ShortSource=error=""
 Encounter=EncounterTable=LocationTiers=Rolls=Table=c=[]
-n = '\n'
+n,q = '\n','\\"'
 num,xpTotal = 1,0
 encounter=[]
 gvars= load_json(get("DencEncounterSources") or '[]') or load_json(get_svar("DencEncounterSources") or '[]') or ["020cd16d-c806-4595-8e43-b63159ed0498"]
@@ -14,7 +14,7 @@ for enc in gvars:
 
 LocationList="\n_Location_ | _Tier(s)_ | _Source_\n"+"\n".join([x.loc + " | "+str(x.minTier)+(("-"+str(x.maxTier)) if not x.maxTier==x.minTier else '')+(" | "+ x.shortSource if 'shortSource' in x else '') for x in encounter])
 title="Dynamic Encounter Tool - Help"
-descStr=f"""An improved encounter tables tool - DEnc was developed to support quick and easy creation of encounter tables with all of the following features:
+descStr="""An improved encounter tables tool - DEnc was developed to support quick and easy creation of encounter tables with all of the following features:
 - Multiroll encounters
 - Easy to follow format
 - Automatic `!battle` support
@@ -41,6 +41,13 @@ DEnc uses a `svar` or `cvar` named `DencEncounterSources` to assign the sources 
 `!svar|cvar DencEncounterSources ["gvar1","gvar2"]`
 
 Will always use a Personal var if available, then Server, then it's default.
+**Default XGE-Tables:** ```py
+"020cd16d-c806-4595-8e43-b63159ed0498"
+# XGArctic, XGDesert, XGForest
+"fb30cfb8-5bcd-4ed3-b5ba-9d26c97836ca"
+# XGGrassland, XGHill, XGMountain, XGSwamp
+"0e15e44f-d89d-4f07-81b3-1e0880dbf7b4"
+# XGUnderdark, XGUrban, XGUnderwater, GSOpenwater```
 
 **Changing the Tables**
 See [Workshop](https://avrae.io/dashboard/workshop/5f78f7774ded026d119cfeed)
@@ -51,5 +58,5 @@ You can file reports and feature requests on [GitHub](https://github.com/storyte
 If you want to tip: [Ko-fi](https://ko-fi.com/storytellermahkasad)"""
 foot="Use With: !denc [entry] <terrain> <tier> [entry #] | v3.0 Made by @Mahksad#5996"
 
-return (f'embed -title "{title}" -desc \"{descStr}\" -footer "{foot}"')
+return (f'''embed -title "{title}" -desc "{descStr.replace('"',q)}" -footer "{foot}"''')
 </drac2>

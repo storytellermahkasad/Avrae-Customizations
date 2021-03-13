@@ -2,9 +2,6 @@
 args = &ARGS&
 strArgs = "&*&"
 
-# I hate it, but double-escape it keeps it functional
-newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
-
 # Alias Generic Variables
 AliasName = 'Inventory Management'
 Top_OptionsVarName = 'InventoryOptions'
@@ -20,16 +17,20 @@ helpT = f"For a list of commands see `{HelpCommand}`"
 
 #Alias Specific Variables
 DataDefaultSourceList = list()
-DataDefaultSourceList.append("DatasList")
+DataDefaultSourceList.append("InventoryItemsList")
 DefaultOutputName = "Inventory"
 DefaultCacheName = "InventoryCache"
 DefaultViewOverride = None
+DefaultShowWeight = True
+
+# I hate it, but double-escape it keeps it functional
+newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
 
 Mode = Display = ValList = Pick = TryPick = ''
 Fuzzy = False
 RValues, RValueList, DataList = load_json('{}'), load_json('[]'), load_json('{}')
 # Set Lists
-# Commands = ["view", "delete", "clear", "new", "rename", "add", "remove", "edit", "move", "more", "p", "n", "options"]
+# Commands = ["modify", "item", "add", "remove", "edit", "move", "more", "p", "n", "options"]
 Commands = ["view", "new", "delete", "clear", "rename", "p", "n", "options"]
 Options = ["source", "output", "page", "view"]
 SecondaryOptions = ["default"]
@@ -37,7 +38,7 @@ ViewOptions = ["none", "view-pretty"]
 
 # Error Catching
 set_cvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
-if args: # Fall Back Commands - In case someone screRValues up
+if args: # Fall Back Commands - In case someone screws up
   if args[0].lower() == 'fix':
     delete_cvar(LoadCheckName) # Success Loading
     return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
@@ -63,7 +64,7 @@ if args: # Fall Back Commands - In case someone screRValues up
       set_cvar(OutputName, "{}")
       delete_cvar(LoadCheckName) # Success Loading
       return (f"""embed -title '{AliasName} - Clear All Containers' -desc "All Containers are cleared. Add more with `{AliasCommand} new`"  {foot}""")
-if False: #int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
+if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
   return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
   This can happen because of a mangled Container or options var.
   
@@ -101,6 +102,7 @@ CacheOutputName = OptionsVar.get('PageCacheOutput', DefaultCacheName)
 #Output = get(OutputName)
 CacheOutput = get(CacheOutputName)
 ViewOverride = OptionsVar.get('ViewOverride', DefaultViewOverride)
+ShowWeight =  OptionsVar.get('ShowWeight', DefaultShowWeight)
 if ViewOverride == 'none': # Catch an issue
  ViewOverride = None
 
@@ -109,6 +111,7 @@ if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, 
   OptionsVar.update(load_json('{\"OutputLocation\":'+dump_json(OutputName)+'}'))
   OptionsVar.update(load_json('{\"PageCacheOutput\":'+dump_json(CacheOutputName)+'}'))
   OptionsVar.update(load_json('{\"ViewOverride\":'+dump_json(ViewOverride)+'}'))
+  OptionsVar.update(load_json('{\"ShowWeight\":'+dump_json(ShowWeight)+'}'))
   # Save to Top then save out Top
   TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
   set_cvar(Top_OptionsVarName, dump_json(TopOptionsVar))
@@ -207,7 +210,7 @@ elif Mode == 'new':
   else: # We've got a new Container, name it.
     Name = TryPick.strip(sepSingle+sepSlash+sep)
     # Do the replace
-    edit = load_json('[]')
+    edit = load_json('{\"I\":{}'+'}')
     # Store and Save
     RValues.update(load_json('{\"'+Name+'\": '+dump_json(edit)+'}'))
     # Save out
@@ -282,6 +285,7 @@ if Mode == 'view' or Display == 'view-pretty':
   # Used By View
   failed = False # Catches view specific issues
   work = entryOut = finalName = ""
+  weightOut = 0
   if not Display == 'view-pretty': # Handle only our errors, not fall-throughs
     title = AliasName+" - Inventory Viewer"
   if not TryPick: # No Container Name Provided
@@ -289,7 +293,7 @@ if Mode == 'view' or Display == 'view-pretty':
     if not Display == 'view-pretty':
       desc="You must specify a Container Name."
       selectIntruction = "Select a Container:"+newLine+ValList
-  elif not Pick: # No Plan Found
+  elif not Pick: # No Container Found
     failed = True
     if not Display == 'view-pretty':
       desc="Container `"+TryPick.capitalize()+"` Not Found"
@@ -303,19 +307,33 @@ if Mode == 'view' or Display == 'view-pretty':
   if not failed: # No problems or not view mode, Go through the entries
     if not Display: # We're viewing
       attempted = ""
+    # Pull out the contianer's info
+    container = RValues[Pick]
+    
+    finalName = f"""{Pick}{" ("+str(container.get('W'))+" lbs.)" if container.get('W') and ShowWeight else ''}"""
+    if ShowWeight:
+      weightOut = container.get('W',0)
 
-  if Mode == 'view' and ViewOverride == 'view-numeric': # We want to view, but in numeric
+    # Pull out the items
+    for itemName,item in container.I.items(): # Do the Display Making!
+      entryName = entryType = ''
+      entryName = itemName
+      entryOut += f"""{newLine}{str(item.C)+"x " if item.get('C') else ''}{entryName}{" ("+str(item.W)+" lbs." if ShowWeight else ''}{" | "+str(item.get('W')*item.get('C'))+" lbs.)" if ShowWeight and item.get('W') and item.get('C', 0) > 1 else ')'}"""
+
+      if ShowWeight:
+        weightOut += item.get('W',0)*item.get('C',1)
+    if not entryOut:
+      entryOut = f"""{newLine}_Container has no items._"""
+
+  # Allow for others to use view code  
+  if finalName: # Handle Special View Names
+    Pick = finalName
+  # Build our Output
+  desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+"**"+Pick.capitalize()+"**" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine+newLine+"Total Weight: "+str(weightOut)+" lbs." if weightOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
+
+  if len(desctemp) <= 2048: # We're under limit - Do the display
+    return f"""embed -title '{title}' -desc '{desctemp}' {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}"""
+  else: # Over Limit - Paging Time
     Mode = 'view-numeric'
-  else:
-    # AlloRValues for others to use view code  
-    if finalName: # Handle Special View Names
-      Pick = finalName
-    # Build our Output
-    desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+"__"+Pick.capitalize()+"__" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
-
-    if len(desctemp) <= 2048: # We're under limit - Do the display
-      return f"""embed -title '{title}' -desc '{desctemp}' {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}"""
-    else: # Over Limit - Paging Time
-      Mode = 'view-numeric'
 
 </drac2>

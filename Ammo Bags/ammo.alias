@@ -4,30 +4,81 @@ args = &ARGS&
 strArgs = "&*&"
 n = '\n'
 # Prebuilt Ammo Types
-AmmoTypes = Enhancements = OtherTypes = []
-AmmoTypes = load_json(get_svar('serverAmmoTypes') if get_svar('serverAmmoTypes') else '{"Arrow": 0.5, "Crossbow Bolt": 0.5, "Bullet": 0.5, "Needle": 0.5, "Handaxe": 1, "Javelin": 1, "Spear": 1, "Dagger": 1, "Light Hammer": 1, "Trident": 1, "Dart": 1, "Net": 1}')
-Enhancements = load_json(get_svar('serverAmmoEnhancements') if get_svar('serverAmmoEnhancements') else '["", "+1","+2","+3","+4"]')
-OtherTypes = load_json(get_svar('serverAmmoOther') if get_svar('serverAmmoOther') else '[""]')
+AmmoTypes = load_json('{}')
 
-selectedType = selectedBonus = ""
+if get_gvar(get("userAmmoTypes")):
+  AmmoTypes.update(load_json(get_gvar(userAmmoTypes)))
+if get_svar("serverAmmoTypes"):
+  AmmoTypes.update(load_json(get_gvar(get_svar("serverAmmoTypes", '{}'))))
+
+if not AmmoTypes: # Pull in the default if we're empty
+  AmmoTypes.update(load_json(get_gvar('ce642622-169d-4f32-b8f1-a09689a39603')))
+
+selectedType,ammoList,collectedList = "","",""
 # Pull ammo type, or create and complain
-set_cvar_nx('AmmoInfo', dump_json(load_json('{\"Loaded\": \"\", \"Bags\": \"worn\", \"Used\": [], \"Fired\": []}')))
+set_cvar_nx('AmmoInfo', dump_json(load_json('{\"Loaded\": \"\", \"Bags\": \"\", \"Used\": [], \"Fired\": []}')))
 # If there's no ammo at all, everything misses
 Info = load_json(AmmoInfo)
 store_bag = load_json(bags)
+
+AmmoNames = list(AmmoTypes.Ammo.keys())
+for baseName in AmmoNames:
+  baseType = AmmoTypes.Ammo[baseName]
+  ammoList += '\n'+baseName+': '
+  for subType in baseType.Subtypes:
+    # Store to the List
+    # The name is always a reference to the base type
+    ammoList += (' '+subType.get('Name').replace('@','') if subType.get('Name') else '')
+
+# Catch the Old Version and Update
+old = ""
+if typeof(Info.Loaded) == 'str':
+  old = Info
+  for baseName in AmmoNames:
+    baseType = AmmoTypes.Ammo[baseName]
+    if old.Loaded == baseName: # Handle them selecting a base type
+      selectedType = load_json('{'+f""" "Name": "{baseName}", "Chance": {baseType.Chance}{', "Enhancement": "'+baseType.get('Enhance')+'"' if baseType.get('Enhance') else ''} """+'}')
+      break
+    for subType in baseType.Subtypes:
+      # The name is always a reference to the base type
+      # This also means we get the base Type as and entry with the baseChance
+      ammoName = subType.get('Name', baseName).replace('@', baseName)
+      # Store to the List
+      recoverChance = subType.get('Chance', baseType.Chance)
+      # Add base and sub Enhance together if both exist
+      enhance = subType.get('Enhance') + (' '+baseType.get('Enhance') if baseType.get('Enhance') else '')
+
+      if strArgs.lower() == ammoName.lower():
+        selectedType = load_json('{'+f""" "Name": "{ammoName}", "Chance": {recoverChance}{', "Enhancement": "'+enhance+'"' if enhance else ''} """+'}')
+        break
+  Info['Loaded'] = selectedType
+  
+# Catch the Old Version and Update
+fireFix = []
+for val in Info.Fired:
+  if not val.get('Name'):
+    Info.Fired.remove(val)
+    fireFix.append(load_json('{'+f""" "Name": "{val.name}", "Amount": {val.amount} """+'}'))
+# Only replace if updated
+if fireFix:
+  Info['Fired'] = fireFix
+# Write out the fixes
+if fireFix or old:
+  set_cvar('AmmoInfo', dump_json(Info))
 
 title = "Ammunition Tracking"
 help = f"""For tracking ammunition taken directly from your inventory.
 `!ammo load <ammotype>` - Load a type of ammo by exact name
 `!ammo bag <bagName>` - Pick a source bag for your ammo
-`!ammo collect` - Pick up ammo after a fight
+`!ammo collect <discard>` - Pick up ammo after a fight, `discard` if ammo was lost
 `ammo`- Snippet for attacking
 
 **Always use one attack at a time while using** `ammo`"""
-stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
-**Ammo Source**: `{Info.Bags}`
+stat = f"""**Loaded Ammo**: `{Info.Loaded.Name if Info.Loaded else 'None'}`
+**Ammo Source**: `{Info.Bags if Info.Bags else 'None'}`
 **Fired Ammo**:
-{n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+{n.join(["  "+x.Name+": "+str(x.Amount) for x in Info.Fired])}"""
+
 foot = f"""{ctx.prefix+ctx.alias} | Ammo Tracking | Made by Mahkasad#5996"""
 adds = "-color <color> -thumb <image>"
 
@@ -35,7 +86,8 @@ if not args: # View fired ammo and help
   return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
 
 elif args[0] == 'bag' and len(args)>1:
-  strArgs = strArgs.replace('bag ','', 1) # Strip the chosen mode
+  mode = args.pop(0)
+  strArgs = strArgs.replace(mode,'',1).lstrip() # Strip the chosen mode
   strArgs = strArgs.strip("\"") # get rid of quotes
   selected = [b for b in store_bag if strArgs.lower() == b[0].lower()]
   
@@ -46,14 +98,17 @@ elif args[0] == 'bag' and len(args)>1:
     return f"""embed -title '{title}' -desc 'Could not find `{strArgs}`. Check your inventory to ensure it exists.{n+n+help+n+n+stat}' -footer '{foot}' {adds}"""
   Info['Bags'] = selected[0][0]
   set_cvar('AmmoInfo', dump_json(Info))
-  stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
+  stat = f"""**Loaded Ammo**: `{Info.Loaded.Name if Info.Loaded else 'None'}`
   **Ammo Source**: `{Info.Bags}`
   **Fired Ammo**:
-  {n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+  {n.join(["  "+x.Name+": "+str(x.Amount) for x in Info.Fired])}"""
   return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
 
 elif args[0] == 'collect':
-  args.pop(0) # Strip the chosen mode
+  mode = args.pop(0)
+  strArgs = strArgs.replace(mode,'',1).lstrip() # Strip the chosen mode
+  strArgs = strArgs.strip("\"") # get rid of quotes
+  
   discard = args and args[0] == 'discard'
   Used = Info.Used
   # Get the bag
@@ -61,64 +116,91 @@ elif args[0] == 'collect':
   ammo_bags = [x for x in store_bag if x[0] == bagName]
 
   if not ammo_bags:
-    err(f"**Ammunition Tracking**: {bagName} not found. (use `!bag` to check your inventory there).")
+    err(f"**Ammunition Tracking**: `{bagName}` not found. (use `!bag` to check your inventory there).")
 
   if not Used:
     return f"""embed -title '{title}' -desc '{name} has no ammo to collect.{n+n+stat}' -footer '{foot}' {adds}"""
 
-
   # add the ammo from the first ammo bag
   ammo_bag = ammo_bags[0][1]
-  ammoList = ""
   for ammo in Used:
-    restore = ammo.amount
-    for val in AmmoTypes.keys():
-      if val == ammo.name:
-        restore = floor(ammo.amount * AmmoTypes[val])
-        break
-    # calculate return amount from list
-    ammo_bag.update(load_json('{"'+ammo.name+'": '+str(restore+ammo_bag.get(ammo.name,0))+'}'))
-    # append to info
-    ammoList += f"{n if ammoList else ''}{ammo.name}: {restore} | {ammo.amount} > {ammo_bag[ammo.name]}"
-  # Save out the bag changes
-  set_cvar("bags", dump_json(store_bag))
+    # Pull the Used Ammo info
+    restore = floor(ammo.Amount * ammo.Chance)
+
+    if not discard:
+      # calculate return amount from list
+      if restore > 0: # don't write to the bag if we didn't actually recover ammo
+        ammo_bag.update(load_json('{"'+ammo.Name+'": '+str(restore+ammo_bag.get(ammo.Name,0))+'}'))
+      # append to info
+      collectedList += f"{n if collectedList else ''}{ammo.Name}: {restore} | {ammo.Amount} > {ammo_bag[ammo.Name] if ammo.Name in ammo_bag else 0}"
+    else: # append to info
+      collectedList += f"{n if collectedList else ''}{ammo.Name}: {ammo.Amount} > {ammo_bag[ammo.Name] if ammo.Name in ammo_bag else 0}"
+  if not discard: # Save out the bag changes    
+    set_cvar("bags", dump_json(store_bag))
+    message = f"(Collected | Used > Remain):{n+collectedList+n+n+stat}"
+  else: # Different message for discarding
+    title += " - Discard"
+    message = f"(Discarded > Remain):{n+collectedList+n+n+stat}"
+  # Always save out the Ammo Info
   Info.update(load_json('{"Used": []}'))
   set_cvar('AmmoInfo', dump_json(Info))
-  return f"""embed -title '{title}' -desc '{name} collects their ammo.{n}(Collected | Used > Remain):{n+ammoList+n+n+stat}' -footer '{foot}' {adds}"""
+  return f"""embed -title '{title}' -desc '{name} collects their ammo.{n}{message}' -footer '{foot}' {adds}"""
 
 elif args[0] == 'load':
-  if not len(args)>1:
-    return f"""embed -title 'Ammunition Tracking' -desc 'Choose the ammo type to load. Valid ammo types are in the format:{n}`<Enhancement> [Ammo] <Other>`{n}Items in <> are optional.{n+n}Valid Ammo Types:{n}{"Enhancements: `"+(", ".join(Enhancements[1::]))+"`"+n if Enhancements else ''}{"Ammo: `"+", ".join(AmmoTypes.keys())+"`"+n}{"Other: `"+(", ".join(OtherTypes[1::]))+"`" if OtherTypes else ''}' -footer '{foot}' {adds}"""
-  test = ""
-  strArgs = strArgs.replace('load ','', 1) # Strip the chosen mode
+  mode = args.pop(0)
+  strArgs = strArgs.replace(mode,'',1).lstrip() # Strip the chosen mode
   strArgs = strArgs.strip("\"") # get rid of quotes
-  for bonus in Enhancements:
-    for val in AmmoTypes.keys():
-      for other in OtherTypes:
-        if strArgs.lower() == f"""{bonus.lower()+' ' if bonus else ''}{val.lower()}{' '+other.lower() if other else ''}""":
-          selectedType = f"""{bonus+' ' if bonus else ''}{val}{' '+other if other else ''}"""
-          selectedBonus = bonus.lstrip('+')
+  if len(args) > 0:
+    for baseName in AmmoNames:
+      baseType = AmmoTypes.Ammo[baseName]
+      if strArgs.lower() == baseName.lower(): # Handle them selecting a base type
+        selectedType = load_json('{'+f""" "Name": "{baseName}", "Chance": {baseType.Chance}{', "Enhancement": "'+baseType.get('Enhance')+'"' if baseType.get('Enhance') else ''} """+'}')
+        break
+
+      for subType in baseType.Subtypes:
+        # The name is always a reference to the base type
+        # This also means we get the base Type as and entry with the baseChance
+        ammoName = subType.get('Name', baseName).replace('@', baseName)
+        # Store to the List
+        recoverChance = subType.get('Chance', baseType.Chance)
+        # Add base and sub Enhance together if both exist
+        enhance = subType.get('Enhance') + (' '+baseType.get('Enhance') if baseType.get('Enhance') else '')
+
+        if strArgs.lower() == ammoName.lower():
+          selectedType = load_json('{'+f""" "Name": "{ammoName}", "Chance": {recoverChance}{', "Enhancement": "'+enhance+'"' if enhance else ''} """+'}')
           break
-  if not selectedType:
-    for bonus in Enhancements[::-1]:
-      for val in AmmoTypes.keys():
-        for other in OtherTypes:
-          if strArgs.lower() in f"""{bonus.lower()+' ' if bonus else ''}{val.lower()}{' '+other.lower() if other else ''}""":
-            selectedType = f"""{bonus+' ' if bonus else ''}{val}{' '+other if other else ''}"""
-            selectedBonus = bonus.lstrip('+')
+    # Fuzzy Match in reverse
+    if not selectedType:
+      for baseName in AmmoNames[::-1]:
+        baseType = AmmoTypes.Ammo[baseName]
+        if strArgs.lower() in baseName.lower(): # Handle them selecting a base type
+          selectedType = load_json('{'+f""" "Name": "{baseName}", "Chance": {baseType.Chance}{', "Enhancement": "'+baseType.get('Enhance')+'"' if baseType.get('Enhance') else ''} """+'}')
+          break
+
+        for subType in baseType.Subtypes:
+          # The name is always a reference to the base type
+          # This also means we get the base Type as and entry with the baseChance
+          ammoName = subType.get('Name', baseName).replace('@', baseName)
+          recoverChance = subType.get('Chance', baseType.Chance)
+          # Add base and sub Enhance together if both exist
+          enhance = subType.get('Enhance') + (' '+baseType.get('Enhance') if baseType.get('Enhance') else '')
+
+          if strArgs.lower() in ammoName.lower():
+            selectedType = load_json('{'+f""" "Name": "{ammoName}", "Chance": {recoverChance}{', "Enhancement": "'+enhance+'"' if enhance else ''} """+'}')
             break
- 
+
   if not selectedType:
-    desc = f""""""
-    return f"""embed -title 'Ammunition Tracking' -desc 'Ammo type {strArgs} not found. Valid ammo types are in the format:{n}`<Enhancement> [Ammo] <Other>`{n}Items in <> are optional.{n+n}Valid Ammo Types:{n}{"Enhancements: `"+(", ".join(Enhancements[1::]))+"`"+n if Enhancements else ''}{"Ammo: `"+", ".join(AmmoTypes.keys())+"`"+n}{"Other: `"+(", ".join(OtherTypes[1::]))+"`" if OtherTypes else ''}' -footer '{foot}' {adds}"""
+    return f"""embed -title 'Ammunition Tracking' -desc '{"Ammo type `"+strArgs+"` not found." if strArgs else "Choose the ammo type to load."}
+    The Ammo format is: `[Enhancement] <AmmoType>`
+
+    **Valid Ammo Types and their Enhancements:**{ammoList}' -footer '{foot}' {adds}"""
 
   Info['Loaded'] = selectedType
-  Info['Enhancement'] = selectedBonus
   set_cvar('AmmoInfo', dump_json(Info))
-  stat = f"""**Loaded Ammo**: `{Info.Loaded if Info.Loaded else 'None'}`
+  stat = f"""**Loaded Ammo**: `{Info.Loaded.Name if Info.Loaded else 'None'}`
   **Ammo Source**: `{Info.Bags}`
   **Fired Ammo**:
-  {n.join(["  "+x.name+": "+str(x.amount) for x in Info.Fired])}"""
+  {n.join(["  "+x.Name+": "+str(x.Amount) for x in Info.Fired])}"""
   return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""
 else:
   return f"""embed -title '{title}' -desc '{help+n+n+stat}' -footer '{foot}' {adds}"""

@@ -1,13 +1,20 @@
 <drac2>
 args = &ARGS&
-if len(args) >= 3 or not (args[1].isdigit() and args[2].isdigit()):
+title = ''
+targ = args[0] if args else ''
+spellLevel = args[1] if len(args)>1 else ''
+restore = args[2] if len(args)>2 else ''
+
+if targ and spellLevel.isdigit() and restore.isdigit():
   c = combat()
   if c:
-    tar = c.get_combatant(args[0])
+    tar = c.get_combatant(targ)
     if tar:
-      prev = tar.spellbook.get_slots(args[1])
-      tar.spellbook.set_slots(args[1],args[2])
-      return f"""embed -title "Retored Slots to {tar.name}" -f "Spell Slots Level {prev}->{tar.spellbook.get_slots(args[1])}|{tar.spellbook.slots_str(args[1])}" """
-return f"""embed -title "Failed to Restore Slots" -desc "Got Name: `{args[0]}` Slot: `{args[1]}` Value: `{args[2]}`
-You must enter a `!setspells [targetName] [slot level] [value]`" """
+      prev = tar.spellbook.get_slots(spellLevel)
+      tar.spellbook.set_slots(spellLevel,restore)
+      return f"""embed -title "Set Slots - Restored Slots to {tar.name}" -f "Spell Slots Level {prev}->{tar.spellbook.get_slots(spellLevel)}|{tar.spellbook.slots_str(spellLevel)}" -footer "!setspells <targetName> <slot level> <restore value> | Made by @Mahksad#5996" """
+    else:
+      title = 'Set Slots - Could not find Combatant!'
+return f"""embed -title "{title if title else 'Set Slots - Failed to Restore Slots'}" -desc "Got Name: `{targ if targ else ' '}` Slot: `{spellLevel if spellLevel else ' '}` Value: `{restore if restore else ' '}`
+You must enter a `!setspells <targetName> <slot level> <restore value>`" -footer "!setspells <targetName> <slot level> <restore value> | Made by @Mahksad#5996" """
 </drac2>

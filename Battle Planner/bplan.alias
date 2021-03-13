@@ -1,18 +1,16 @@
 <drac2> # Battle Planner
 args = &ARGS&
-strArgs = "&*&"
-
-# I hate it, but double-escape it keeps it functional
-newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
+strArgs = """&*&"""
 
 # Alias Generic Variables
+AuthorName = 'Mahkasad#5996'
 AliasName = 'Battle Planner'
 Top_OptionsVarName = 'BattleToolOptions'
 OptionsVarName = 'BattlePlanner'
 LoadCheckName = 'BattleToolsLoadCheck'
 AliasPrefix = ctx.prefix
 AliasCommand = ctx.prefix+ctx.alias
-versionNumner = "2.35"
+versionNumner = "2.41"
 version = "v"+versionNumner
 
 #Alias Specific Variables
@@ -23,6 +21,9 @@ DefaultMoreName = "BattlesBeginMore"
 DefaultCacheName = "BattlePlannerCache"
 DefaultViewOverride = None
 DefaultMapAttach = 'DM'
+
+# I hate it, but double-escape it keeps it functional
+newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
 
 Mode = Display = PlanList = WPlanList = Pick = TryPick = ''
 Fuzzy = False
@@ -39,8 +40,9 @@ argNamesMulti = ["attack","b","d","immune","neutral","resist","sb","t","vuln"]
 argNamesMeta = ["dyn", "turnnotif", "deathdelete"]
 argDescMeta = load_json('{"dyn": "Dynamic initiative; Rerolls all initiatves at the start of a round", "turnnotif": "Notifies the controller of the next combatant in initiative", "deathdelete": "Toggles removing monsters below 0 HP"}')
 argNamesMap = ["bg", "mapsize", "options", "objects", "walls", "view"]
-argDescMap = {"options": ("Options",""), "objects": ("Objects","/"), "walls": ("Walls","/"), "fow": ("FOW",", ")}
+argDescMap = {"options": ("Options",""), "objects": ("Objects","/"), "walls": ("Walls","/"), "json": ("JSON",",")}
 argSingleDescMap = load_json('{"bg": "Background", "mapsize": "Size", "view": "View"}')
+agSpecialDescMap = {"fow": ("FOW",",")}
 
 # Error Catching
 set_uvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
@@ -50,7 +52,7 @@ if args: # Fall Back Commands - In case someone screws up
     delete_uvar(LoadCheckName) # Success Loading
     return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
 
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
   if args[0].lower() == 'reset':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     TopOptionsVar.update(load_json('{\"'+OptionsVarName+'\": {}'+'}'))
@@ -59,18 +61,18 @@ if args: # Fall Back Commands - In case someone screws up
     return (f"""embed -title '{AliasName} - Reset' -desc "The {AliasName} Tool has done a reset of the `{OptionsVarName}` portion of the `{Top_OptionsVarName}` uvar. This should be done if the load uvars have been corrupted.
 
     If the problem persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}` or contact me on my Discord.
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
   elif args[0].lower() == 'clear':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
     OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
     if not len(args) > 1 or not args[1]=='confirm': # Make sure 'clear confirm'
-      return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc You must specify a confirmation to clear all `{OutputName}` battles:
-      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+      return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc "You must specify a confirmation to clear all `{OutputName}` battles:
+      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
     else: # Wipe out the uvar
       set_uvar(OutputName, "{}")
       delete_uvar(LoadCheckName) # Success Loading
-      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in {OutputName} cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in {OutputName} cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
 
 if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
   return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
@@ -95,7 +97,7 @@ if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then h
 
   If the problem still persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}`
   or contact me on my Discord (found in `{AliasCommand} help`).
-  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
 
 # Get the Options
 TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+OptionsVarName+"\": {}"+"}"))
@@ -152,7 +154,7 @@ desc = commandList = examples = selectIntruction = pagingInfo = ""
 fullCommand = f"""{AliasCommand}{' '+" ".join(&ARGS&) if &ARGS& else ''}"""
 title = AliasName+(" - "+Mode.capitalize() if Mode else '')
 attempted = "Attempted:"+newLine+"`"+fullCommand+"`"
-foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by Mahkasad#5996'"""
+foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by {AuthorName}'"""
 
 if not (Mode=='p' or Mode=='n'): # Delete the Cache
   delete_uvar(CacheOutputName)
@@ -408,21 +410,27 @@ elif Mode == 'new':
     BName = TryPick.strip(sepSingle+sepSlash+sep)
     # Do the replace
     editBattles = load_json('[]')
-    if not args:
-      desc = "Battle created without monsters. Use `add` to add in monsters."
-    else:
-      strArgs = strArgs.strip()
-      if strArgs[0] == sep:
-        strArgs = strArgs.replace(sep,'',1)
-        strArgs = strArgs[::-1].replace(sep,'',1)[::-1]
-      desc = "Battle Created with entry: `"+strArgs.replace(sep,sepSlash)+"`"
-      editBattles.append(strArgs)
+    # Split the lines to get all our commands!
+    commandList = strArgs.splitlines()
+    # Iterate over the lines
+    for line in commandList:
+      line = line.strip()
+      # Handle the value starting with a quote we missed
+      if line[0] == sep:
+        line = line.replace(sep,'',1)
+        line = line[::-1].replace(sep,'',1)[::-1]
+      editBattles.append(line)
     # Store and Save
     WBattles.update(load_json('{\"'+BName+'\": '+dump_json(editBattles)+'}'))
     RBattles.update(load_json('{\"'+BName+'\": '+dump_json(editBattles)+'}'))
     # Save out
     set_uvar(OutputName, dump_json(WBattles))
     Pick = BName
+    # Output Build
+    if not args:
+      desc = "Battle __"+Pick.capitalize()+"__ Created without monsters. Use `add` to add in monsters."
+    else:
+      desc = "Battle __"+Pick.capitalize()+"__ Created with entry: `"+strArgs.replace(sep,sepSlash)+"`"
     # Wipe because we succeded
     attempted = ""
     examples = ""
@@ -520,17 +528,23 @@ elif Mode == 'add':
         examples = ""
       else: # Ready to Store the Modified Battle
         editBattles = WBattles[Pick]
-        strArgs = strArgs.strip()
-        if strArgs[0] == sep:
-          strArgs = strArgs.replace(sep,'',1)
-          strArgs = strArgs[::-1].replace(sep,'',1)[::-1]
-        editBattles.append(strArgs)
+                # Split the lines to get all our commands!
+        commandList = strArgs.splitlines()
+        # Iterate over the lines
+        for line in commandList:
+          line = line.strip()
+          # Handle the value starting with a quote we missed
+          if line[0] == sep:
+            line = line.replace(sep,'',1)
+            line = line[::-1].replace(sep,'',1)[::-1]
+          editBattles.append(line)
+        # Store and Save
         WBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
         RBattles.update(load_json('{\"'+Pick+'\": '+dump_json(editBattles)+'}'))
         # Save out
         set_uvar(OutputName, dump_json(WBattles))
         # Output Build
-        desc = "Added entry `"+strArgs.replace(sep,sepSlash)+"`"
+        desc = "__"+Pick.capitalize()+"__: Added entry `"+strArgs.replace(sep,sepSlash)+"`"
         # Wipe because we succeded
         attempted = ""
         examples = "" 
@@ -696,13 +710,13 @@ elif Mode == 'map':
   selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
 
   if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
-    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
+    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
   elif not Pick: # No Plan Found
     desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
   else: # We've got an existing battle, edit it.
     editBattles = RBattles[Pick]
     if not args:
-      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
+      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
       selectIntruction = ""
     elif not Pick in WBattles: # Editing with Multi-Source
       # Output Build
@@ -722,13 +736,14 @@ elif Mode == 'map':
         # Ready to Map the selected entry
         outCommand = ""
         result = ""
-        mapCommands = ""
+        mapCommands = []
         offset = 0
         # Parse the commands
         work = argparse(args)
         mapCommands += [f"""{argDescMap[x][0]}: {work.join(x,argDescMap[x][1])} ~""" for x in argDescMap.keys() if work.get(x)]
+        mapCommands += [f"""{agSpecialDescMap[x][0]}: {work.join(x,agSpecialDescMap[x][1]).replace(',',', ')} ~""" for x in agSpecialDescMap.keys() if work.get(x)]
         mapCommands += [f"""{argSingleDescMap[x]}: {work.last(x)} ~""" for x in argSingleDescMap.keys() if work.last(x)]
-
+        # Put all the commands together
         mapCommands = " ".join(mapCommands)
         mapCommands = mapCommands[::-1].replace('~ ', '', 1)[::-1]
 
