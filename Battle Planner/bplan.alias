@@ -10,7 +10,7 @@ OptionsVarName = 'BattlePlanner'
 LoadCheckName = 'BattleToolsLoadCheck'
 AliasPrefix = ctx.prefix
 AliasCommand = ctx.prefix+ctx.alias
-versionNumner = "2.41"
+versionNumner = "2.48"
 version = "v"+versionNumner
 
 #Alias Specific Variables
@@ -129,12 +129,32 @@ if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, 
   set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
 
 for var in SourceName: # Load Sources
+  # Single gvar
   if get_gvar(var):
     RBattles.update(load_json(get_gvar(var)))
-  elif get_svar(var):
-    RBattles.update(load_json(get_svar(var, '{}')))
-  else:
-    RBattles.update(load_json(get(var, '{}')))
+  # Server Var
+  if (currVar := get_svar(var)):
+    jsonVar = load_json(currVar) or None
+    if typeof(jsonVar) == 'SafeList': # Is gvar List
+      for gvar in jsonVar:
+        if get_gvar(gvar):
+          RBattles.update(load_json(get_gvar(gvar)))
+    elif get_gvar(jsonVar): # Single Gvar
+      RBattles.update(load_json(get_gvar(jsonVar)))
+    else: # Single Var
+      RBattles.update(load_json(currVar))
+   # User/Char Var
+  if (currVar := get(var)):
+    jsonVar = load_json(currVar) or None
+    if typeof(jsonVar) == 'SafeList': # Is gvar List
+      for gvar in jsonVar:
+        if get_gvar(gvar):
+          RBattles.update(load_json(get_gvar(gvar)))
+    elif get_gvar(jsonVar): # Single Gvar
+      RBattles.update(load_json(get_gvar(jsonVar)))
+    else: # Single Var
+      RBattles.update(load_json(currVar))
+  # Failed to load it, pretend it's not there
 # Load the Output
 WBattles.update(load_json(get(OutputName,'{}')))
 
