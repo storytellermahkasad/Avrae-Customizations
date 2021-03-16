@@ -128,6 +128,7 @@ if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, 
   TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
   set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
 
+# TODO: #1 Swap to loading names only to prevent Too Big error
 for var in SourceName: # Load Sources
   # Single gvar
   if get_gvar(var):
@@ -841,6 +842,7 @@ if Mode == 'view' or Display == 'view-pretty':
   # Used By View
   failed = False # Catches view specific issues
   work = entryOut = effectsOut = addsOut = notesOut = optsOut = metaOut = extraOut = finalName = ""
+  # TODO: #2 Convert PlanList to an Inline
   if not Display == 'view-pretty': # Handle only our errors, not fall-throughs
     title = AliasName+" - Battle Viewer"
   if not TryPick: # No Battle Name Provided
