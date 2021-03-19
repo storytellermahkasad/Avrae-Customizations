@@ -3,46 +3,53 @@ args = &ARGS&
 strArgs = """&*&"""
 
 # Alias Generic Variables
+AuthorName = 'Mahkasad#5996'
 AliasName = 'Battle Planner'
 Top_OptionsVarName = 'BattleToolOptions'
 OptionsVarName = 'BattlePlanner'
 LoadCheckName = 'BattleToolsLoadCheck'
 AliasPrefix = ctx.prefix
 AliasCommand = ctx.prefix+ctx.alias
-versionNumner = "2.41"
+versionNumner = "2.48"
 version = "v"+versionNumner
 
 #Alias Specific Variables
-DefaultSourceList = list()
-DefaultSourceList.append("Battles")
-DefaultOutputName = "Battles"
-DefaultMoreName = "BattlesBeginMore"
-DefaultCacheName = "BattlePlannerCache"
-DefaultViewOverride = None
-DefaultMapAttach = 'DM'
-DefaultAttachInit = 20
-
 # I hate it, but double-escape it keeps it functional
 newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
 
 Mode = Display = PlanList = WPlanList = Pick = TryPick = ''
 Fuzzy = False
-RBattles, WBattles, RBattlePlans = load_json('{}'), load_json('{}'), load_json('[]')
+OptionsVar,RBattles, WBattles, RBattlePlans = load_json('{}'),load_json('{}'), load_json('{}'), load_json('[]')
+
+# Options
+OptionsDefault = {
+  "SourceLocation": ["Battles"],
+  "OutputLocation": "Battles",
+  "MoreOutputLocation": "BattlesBeginMore",
+  "PageCacheOutput": "BattlePlannerCache",
+  "ViewOverride": "None",
+  "MapAttach": "DM",
+  "AttachInit": 20 }
+# Handle options that take lists
+OptionsLists = ["SourceLocation"]
+# Handle options with specific choices
+OptionsFixed = {
+  "ViewOverride": ["none", "view-pretty", "view-numeric"],
+  "MapAttach": ["DM", "Map", "Lair"] }
+# The Descriptions of Each Option
+# CodeName, ShortName, Valid Type, Description
+OptionsDesc = {
+  "SourceLocation": ["Source", "List of any UVAR|CVAR|SVAR*", "Where to load the Battle Plan List. Each source can be a list of GVARs"],
+  "OutputLocation": ["Output", "Any Single UVAR|CVAR*", "Where to store the Battle Plan List."],
+  "MoreOutputLocation": ["More", "Any Single UVAR*", "Where to store the begin commands cache."],
+  "PageCacheOutput": ["Page", "Any Single UVAR*", "Where to store the page cache"],
+  "ViewOverride": ["View", "Fixed Value", "The viewmode to force."],
+  "MapAttach": ["Attach", "Fixed Value", "Map Attachment name to use."],
+  "AttachInit": ["Init", "Any Integer", "The initiative count to place the Map Attach."] }
+
 # Set Lists
 Commands = ["view","begin", "end", "delete", "clear", "new", "rename", "add", "remove", "edit", "move", "more", "p", "n", "options", "map"]
-# OptionName: ('OptionSaveName', CurrentValue, DefaultValue)
-Options = {
-  "source": {"OptionSaveName": 'SourceLocation', "CurrentValue": SourceName, "DefaultValue": DefaultSourceList},
-  "output": {"OptionSaveName": 'OutputLocation', "CurrentValue": OutputName, "DefaultValue": DefaultOutputName},
-  "more": {"OptionSaveName": 'MoreOutputLocation', "CurrentValue": MoreOutputName, "DefaultValue": DefaultMoreName},
-  "page": {"OptionSaveName": 'PageCacheOutput', "CurrentValue": CacheOutputName, "DefaultValue": DefaultCacheName},
-  "attach": {"OptionSaveName": 'MapAttach', "CurrentValue": MapAttach, "DefaultValue": DefaultMapAttach},
-  "init": {"OptionSaveName": 'AttachInit', "CurrentValue": AttachInit, "DefaultValue": DefaultAttachInit},
-  "view": {"OptionSaveName": 'ViewOverride', "CurrentValue": ViewOverride, "DefaultValue": DefaultViewOverride} }
-
-SecondaryOptions = ["default"]
-ViewOptions = ["none", "view-pretty", "view-numeric"]
-MapAttaches = ["DM", "Map", "Lair"]
+# Lists for specific fixed options
 argNamesSingle = ["ac","controller","desc","dur","hp","max","name","note","parent","thp"]
 argNamesSpecial = ["conc","end","h","rollhp"]
 argNamesMulti = ["attack","b","d","immune","neutral","resist","sb","t","vuln"]
@@ -55,8 +62,8 @@ argDescMap = {
   "options": ("Options",""),
   "objects": ("Objects","/"),
   "walls": ("Walls","/"),
-  "fow": ("FOW",", "),
-  "json": ("JSON",", ") }
+  "fow": ("FOW",","),
+  "json": ("JSON",",") }
 
 argSingleDescMap = {
   "bg": "Background",
@@ -71,7 +78,7 @@ if args: # Fall Back Commands - In case someone screws up
     delete_uvar(LoadCheckName) # Success Loading
     return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
 
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
   if args[0].lower() == 'reset':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     TopOptionsVar.update(load_json('{\"'+OptionsVarName+'\": {}'+'}'))
@@ -80,18 +87,18 @@ if args: # Fall Back Commands - In case someone screws up
     return (f"""embed -title '{AliasName} - Reset' -desc "The {AliasName} Tool has done a reset of the `{OptionsVarName}` portion of the `{Top_OptionsVarName}` uvar. This should be done if the load uvars have been corrupted.
 
     If the problem persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}` or contact me on my Discord.
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
   elif args[0].lower() == 'clear':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
-    OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
+    OutputName= OptionsVar.get('OutputLocation', OptionsDefault['OutputLocation'])
     if not len(args) > 1 or not args[1]=='confirm': # Make sure 'clear confirm'      
-      return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc You must specify a confirmation to clear all `{OutputName}` battles:
-      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+      return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc "You must specify a confirmation to clear all `{OutputName}` battles:
+      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
     else: # Wipe out the uvar
       set_uvar(OutputName, "{}")
       delete_uvar(LoadCheckName) # Success Loading
-      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in {OutputName} cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in `{OutputName}` cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
 
 if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
   return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
@@ -100,7 +107,7 @@ if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then h
   If you are unsure what has happened try the following:
   
   **Check the Output File:**
-    `{AliasPrefix}uvar {DefaultOutputName}` - If you set a custom Output, change the name to that
+    `{AliasPrefix}uvar {OptionsDefault['OutputLocation']}` - If you set a custom Output, change the name to that
     If the file looks incorrect it will need to be fixed.
   
   **If you are unsure how to fix the output file:**
@@ -116,46 +123,64 @@ if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then h
 
   If the problem still persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}`
   or contact me on my Discord (found in `{AliasCommand} help`).
-  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by Mahkasad#5996'""")
+  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
 
-# Get the Options
+# We've passed the first load in check
+# Load the Options
 TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+OptionsVarName+"\": {}"+"}"))
-OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
+OptionsVar.update(OptionsDefault)
+OptionsVar.update(load_json(dump_json(TopOptionsVar.get(OptionsVarName, '{}'))))
+# Load in the values by name
+SourceName = OptionsVar.get('SourceLocation')
+OutputName = OptionsVar.get('OutputLocation')
+MoreOutputName= OptionsVar.get('MoreOutputLocation')
+CacheOutputName = OptionsVar.get('PageCacheOutput')
+ViewOverride = OptionsVar.get('ViewOverride')
+MapAttach = OptionsVar.get('MapAttach')
+AttachInit = OptionsVar.get('AttachInit')
 
-SourceName= OptionsVar.get('SourceLocation', DefaultSourceList)
-OutputName= OptionsVar.get('OutputLocation', DefaultOutputName)
-MoreOutputName= OptionsVar.get('MoreOutputLocation', DefaultMoreName)
-CacheOutputName = OptionsVar.get('PageCacheOutput', DefaultCacheName)
-
-# Source = get(SourceName)
-# Output = get(OutputName)
+# Load the values that are stored as a varname
 MoreOutput= get(MoreOutputName)
 CacheOutput = get(CacheOutputName)
-ViewOverride = OptionsVar.get('ViewOverride', DefaultViewOverride)
-MapAttach = OptionsVar.get('MapAttach', DefaultMapAttach)
-AttachInit = OptionsVar.get('AttachInit', DefaultAttachInit)
-if ViewOverride == 'none': # Catch an issue
+
+# Handle issues with values
+# This covers None failing to match
+if ViewOverride.lower() == 'none':
  ViewOverride = None
 
 if not TopOptionsVar.get(OptionsVarName): # If they don't already have options, save them
-  OptionsVar.update(load_json('{\"SourceLocation\":'+dump_json(SourceName)+'}'))
-  OptionsVar.update(load_json('{\"OutputLocation\":'+dump_json(OutputName)+'}'))
-  OptionsVar.update(load_json('{\"MoreOutputLocation\":'+dump_json(MoreOutputName)+'}'))
-  OptionsVar.update(load_json('{\"PageCacheOutput\":'+dump_json(CacheOutputName)+'}'))
-  OptionsVar.update(load_json('{\"ViewOverride\":'+dump_json(ViewOverride)+'}'))
-  OptionsVar.update(load_json('{\"MapAttach\":'+dump_json(MapAttach)+'}'))
-  OptionsVar.update(load_json('{\"AttachInit\":'+dump_json(AttachInit)+'}'))
   # Save to Top then save out Top
   TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
   set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
 
+# TODO: #1 Swap to loading names only to prevent Too Big error
 for var in SourceName: # Load Sources
+  # Single gvar
   if get_gvar(var):
     RBattles.update(load_json(get_gvar(var)))
-  elif get_svar(var):
-    RBattles.update(load_json(get_svar(var, '{}')))
-  else:
-    RBattles.update(load_json(get(var, '{}')))
+  # Server Var
+  if (currVar := get_svar(var)):
+    jsonVar = load_json(currVar) or None
+    if typeof(jsonVar) == 'SafeList': # Is gvar List
+      for gvar in jsonVar:
+        if get_gvar(gvar):
+          RBattles.update(load_json(get_gvar(gvar)))
+    elif get_gvar(jsonVar): # Single Gvar
+      RBattles.update(load_json(get_gvar(jsonVar)))
+    else: # Single Var
+      RBattles.update(load_json(currVar))
+   # User/Char Var
+  if (currVar := get(var)):
+    jsonVar = load_json(currVar) or None
+    if typeof(jsonVar) == 'SafeList': # Is gvar List
+      for gvar in jsonVar:
+        if get_gvar(gvar):
+          RBattles.update(load_json(get_gvar(gvar)))
+    elif get_gvar(jsonVar): # Single Gvar
+      RBattles.update(load_json(get_gvar(jsonVar)))
+    else: # Single Var
+      RBattles.update(load_json(currVar))
+  # Failed to load it, pretend it's not there
 # Load the Output
 WBattles.update(load_json(get(OutputName,'{}')))
 
@@ -175,7 +200,11 @@ desc = commandList = examples = selectIntruction = pagingInfo = ""
 fullCommand = f"""{AliasCommand}{' '+" ".join(&ARGS&) if &ARGS& else ''}"""
 title = AliasName+(" - "+Mode.capitalize() if Mode else '')
 attempted = "Attempted:"+newLine+"`"+fullCommand+"`"
-foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by Mahkasad#5996'"""
+foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by {AuthorName}'"""
+# Fixed Strings
+MultiSourceError = newLine+"_Mult-Source View is an advanced feature._"+newLine+newLine+"Battles cannot be edited unless stored in Output: `"+OutputName+"`"+newLine+"To change the Output: `"+AliasCommand+" options`"
+MapTextHelper = "Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]` `*`"+newLine+"`[-mapsize <XxY size>]` `*^`"+newLine+"`[-view <view>]` `*`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**`^` Indicates this value is required!**"+newLine+"**`*` Indicates only the last value will be used.**"
+PlanEditExample = " \\\"Example Battle\\\" "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i madd \\\"Ancient Black Dragon\\\"`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i effect OG1 bulk -ac +10`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
 
 if not (Mode=='p' or Mode=='n'): # Delete the Cache
   delete_uvar(CacheOutputName)
@@ -224,7 +253,7 @@ if not Mode and PlanList: # Check for no inputs
   selectIntruction = "Select a Battle Plan:"+newLine+PlanList
   Display = ViewOverride if ViewOverride else 'view-pretty'
 
-if not PlanList and not (Mode == 'new' or Mode == 'clear' or Mode == 'options'): # No battles
+if not PlanList and not (Mode == 'new' or Mode == 'options'): # No battles
   title = AliasName
   desc = "No Battles Found. Add one with `"+AliasCommand+" new`, `"+AliasPrefix+"denc`, or manually to: `"+AliasPrefix+"uvar "+",".join(SourceName)+"`."+newLine+newLine+"For a list of commands see `"+AliasCommand+" help`"
   
@@ -233,103 +262,49 @@ if not PlanList and not (Mode == 'new' or Mode == 'clear' or Mode == 'options'):
 elif Mode == 'options':
   # We clear this if we succeed
   examples = "`"+AliasCommand+" "+Mode+" Source Battles Battles2`"+newLine+"`"+AliasCommand+" "+Mode+" View pretty`"+newLine+"`"+AliasCommand+" default Source` - For restoring a default option"+newLine+"`"+AliasCommand+" reset` - For restoring all defaults"
+  newOption = ""
   if not TryPick: # Just print them out
     desc="Loaded options for the "+AliasName+"."+newLine+"To Change an option select the name and new command."
     attempted = ""
-  else: # We're trying to make a change    
-    # Do exact match on option secondary command
-    comm=[x for x in SecondaryOptions if TryPick.lower() == x]
-    opt = select = ""
-    if comm and args:
-      comm = comm[0]
-      TryPick = args.pop(0)
-      strArgs = strArgs.replace(str(TryPick),'',1).lstrip()
-    # Do exact and then fuzzy match on option names
-    opt=[x for x in Options.keys() if TryPick.lower() == x]
-    if not opt:
-      opt=[x for x in Options.keys() if TryPick.lower() in x]
-    if opt and (args or comm):
+  else: # We're trying to make a change
+    opt = [x for x in OptionsVar.keys() if TryPick.lower() == x.lower()]
+    if not opt: # Failed Exact, try Fuzzy 
+      opt = [x for x in OptionsVar.keys() if TryPick.lower() in x.lower()]
+    if opt and args: # Don't change unless we've got something to change to
       opt = opt[0]
-    
-    if opt == 'view' and not comm: # Handle getting the view type from choices
-      tryFor = args.pop(0)
-      strArgs = strArgs.replace(str(tryFor),'',1).lstrip()
-      select=[x for x in ViewOptions if tryFor.lower() == x]
-      if not select:
-        select=[x for x in ViewOptions if tryFor.lower() in x]
-      if select:
-        select = select[0]
+      if strArgs == 'default': # Check if we want to Default
+        newOption = OptionsDefault[opt]
+      elif opt in OptionsFixed.keys(): # Check if we're a fixed option
+        optionTry = args.pop(0)
+        strArgs.replace(str(optionTry),'',1).lstrip()
+        fixedOption = [x for x in OptionsFixed[opt] if optionTry.lower() in x.lower()]
+        if fixedOption: # Found it, assign
+          newOption = fixedOption[0]
+      elif opt in OptionsLists: # Check if we're an option that wants lists
+        newOption = args
+      else: # Just a normal option
+        newOption = strArgs
+      if newOption: # Fail Check - If we exist we are assigning now
+        OptionsVar[opt] = newOption
+        desc = "Option: `"+opt+"` assigned to: `"+newOption+"`"
+        examples = attempted = "" # Wipe These on success
+        #Save to Top then save Top
+        TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
+        set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
 
-    if (opt and strArgs) or (comm and opt) or (opt and select): # We found, work on it
-      for optKey in Options.keys():
-        if opt == optKey:
-          option = Options[optKey]
-          prior = dump_json(option[1])
-
-          newOpt = OptionsVar.get(option[0], option[2])
-           =
-
-      if opt == "source":
-          prior = dump_json(SourceName)
-          SourceName = load_json('[]')
-          if comm:
-            SourceName = DefaultSourceList
-            strArgs = DefaultSourceList
-          else:
-            SourceName = [x for x in args]
-          OptionsVar['SourceLocation'] = SourceName
-      elif opt == "output":
-        prior = OutputName
-        if comm:
-          OutputName = DefaultOutputName
-          strArgs = DefaultOutputName
-        else:
-          OutputName = strArgs
-        OptionsVar['OutputLocation'] = OutputName
-      elif opt == "more":
-        prior = MoreOutputName
-        if comm:
-          MoreOutputName = DefaultMoreName
-          strArgs = DefaultMoreName
-        else:
-          MoreOutputName = strArgs
-        OptionsVar['MoreOutputLocation'] = MoreOutputName
-      elif opt == "page":
-        prior = CacheOutputName
-        if comm:
-          CacheOutputName = DefaultCacheName
-          strArgs = DefaultCacheName
-        else:
-          CacheOutputName = strArgs
-        OptionsVar['PageCacheOutput'] = CacheOutputName
-      elif opt == "view":
-        prior = ViewOverride
-        if comm:
-          ViewOverride = DefaultViewOverride
-          strArgs = 'None'
-        else:
-          ViewOverride = select if not select == 'none' else None
-      OptionsVar['ViewOverride'] = ViewOverride
-      #Save to Top then save Top
-      TopOptionsVar.update(load_json('{'+sep+OptionsVarName+sep+': '+dump_json(OptionsVar)+'}'))
-      set_uvar(Top_OptionsVarName, dump_json(TopOptionsVar))
-      #Output Builder
-      title +=" - Updated"
-      desc = f"""Option: {opt.capitalize()} changed from `{prior}` to `{strArgs if not select else select.capitalize()}`."""
-      examples = ""
-      attempted = ""
-    else: # Didn't find an option
+    if not newOption: # Didn't find an option
       desc="Failed to find that option or provide a new setting."+newLine+"To Change an option select the name and new command."
+  # Show the current option values
+  optionsBody = f"""{newLine.join(["**"+x+"**: `"+OptionsVar[x]+"`"+(" | Default: `"+OptionsDefault[x]+"`" if not OptionsVar[x] == OptionsDefault[x] else '') for x in OptionsVar.keys()])} """
+  # Build the option descriptions if nothing was changed
+  optionsText = ""
+  
+  if not newOption: # Only show the full info if we've not changed anything
+    optionsText = "**Option Info:**"+newLine+newLine.join(["`"+OptionsDesc[x][0]+"`: "+OptionsDesc[x][1]+newLine+"-"+OptionsDesc[x][2]+(newLine+"--_Valid Options_ - `"+"` | `".join(y for y in OptionsFixed[x])+"`" if x in OptionsFixed else '')+newLine for x in OptionsDesc])+newLine+"_Options with a * are Case Sensitive_"
+  else: # Show the Info for the option that was changed
+    optionsText = "**Option Info:**"+newLine+"`"+OptionsDesc[opt][0]+"`: "+OptionsDesc[opt][1]+newLine+"-"+OptionsDesc[opt][2]+(newLine+"--_Valid Options_ - `"+"` | `".join(y for y in OptionsFixed[opt])+"`" if opt in OptionsFixed else '')+newLine+newLine+"_Options with a * are Case Sensitive_"
 
-  optionsBody = f"""**Plan Source:** `{SourceName[0] if len(SourceName)==1 else SourceName}`{' | [Default: `'+DefaultSourceList[0]+'`]' if not SourceName == DefaultSourceList else ''}
-  **Plan Output:** `{OutputName}`{' | [Default: '+DefaultOutputName+']' if not OutputName == DefaultOutputName else ''}
-  **More Cache:** `{MoreOutputName}`{' | [Default: `'+DefaultMoreName+'`]' if not MoreOutputName == DefaultMoreName else ''}
-  **Page Cache:** `{CacheOutputName}`{' | [Default: `'+DefaultCacheName+'`]' if not CacheOutputName == DefaultCacheName else ''}
-  **View Override:** `{ViewOverride.capitalize() if ViewOverride else 'None'}`{' | [Default: `None`]' if not ViewOverride == None else ''}"""
-
-  optionsText = "**Option Values:**"+newLine+"`Source`: * - Any Uvar - Where to load the battle PlanList."+newLine+"`Output`: * - Any Uvar - Where to store the battle PlanList."+newLine+"`More` Cache: * - Any Uvar - Where to store the more cache."+newLine+"`Page` Cache: * - Any Uvar - Where to store the page cache."+newLine+"`View` Override: `None`|`Numeric`|`Pretty` - The viewmode to force."+newLine+newLine+"_Options with a * are Case Sensitive_"
-
-  return f"""embed -title "{title}" -desc "{desc}{attempted if attempted else ''}{newLine+newLine+optionsBody}{newLine+newLine+optionsText}{newLine+newLine+examples if examples else ''}" {foot}""" 
+  return f"""embed -title "{title}" -desc "{desc}{newLine+attempted if attempted else ''}{newLine+newLine+optionsBody}{newLine+newLine+optionsText if optionsText else ''}{newLine+newLine+examples if examples else ''}" {foot}"""
 
 elif Mode == 'end':
   # End is simple, just call it
@@ -427,7 +402,7 @@ elif Mode == 'new':
   # Cover Output that's always true
   title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
   
-  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\"`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  examples = "`"+AliasCommand+" "+Mode+PlanEditExample
   selectIntruction = "Existing Battle Plans:"+newLine+PlanList
   Display = ViewOverride if ViewOverride else 'view-pretty'
 
@@ -457,9 +432,9 @@ elif Mode == 'new':
     Pick = BName
     # Output Build
     if not args:
-      desc = "Battle created without monsters. Use `add` to add in monsters."
+      desc = "Battle __"+Pick.title()+"__ Created without monsters. Use `add` to add in monsters."
     else:
-      desc = "Battle __"+Pick.capitalize()+"__ Created with entry: `"+strArgs.replace(sep,sepSlash)+"`"
+      desc = "Battle __"+Pick.title()+"__ Created with entry: `"+strArgs.replace(sep,sepSlash)+"`"
     # Wipe because we succeded
     attempted = ""
     examples = ""
@@ -479,15 +454,15 @@ elif Mode == 'delete':
   else:
     if not Pick in WBattles: # Not in the working set      
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc = "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
         examples = ""
     else: # Success
-      PlanList = PlanList.replace(f"""`\'{Pick.capitalize()}\'`{newLine}""",'',1)
+      PlanList = PlanList.replace(f"""`\'{Pick.title()}\'`{newLine}""",'',1)
       WBattles.pop(Pick)
       # RBattles.pop(Pick) # We don't do this so we can display what was deleted
       set_uvar(OutputName, dump_json(WBattles))
-      desc = "Battle Deleted: `"+Pick.capitalize()+"`"
+      desc = "Battle Deleted: `"+Pick.title()+"`"
       # Clear these because success
       examples = ""
       attempted = ""
@@ -512,8 +487,8 @@ elif Mode == 'rename':
     else:
       if not Pick in WBattles: # Editing with Multi-Source
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc =  "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
         examples = ""
       else:
         # Ready to Store the Modified Battle
@@ -526,7 +501,7 @@ elif Mode == 'rename':
         # Save out
         set_uvar(OutputName, dump_json(WBattles))
         # Output Build
-        desc = "Renamed Battle from:"+newLine+"`"+Pick.capitalize()+"` => `"+strArgs.capitalize()+"`"
+        desc = "Renamed Battle from:"+newLine+"`"+Pick.title()+"` => `"+strArgs.capitalize()+"`"
         Pick = strArgs
         # Wipe because we succeded
         attempted = ""
@@ -537,7 +512,7 @@ elif Mode == 'add':
   # Cover Output that's always true
   title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
   
-  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i effect OG1 bulk -ac +10`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  examples = "`"+AliasCommand+" "+Mode+PlanEditExample
   Display = ViewOverride if ViewOverride else 'view-pretty'
   selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
 
@@ -552,8 +527,8 @@ elif Mode == 'add':
     else:
       if not Pick in WBattles: # Editing with Multi-Source
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc =  "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
         examples = ""
       else: # Ready to Store the Modified Battle
         editBattles = WBattles[Pick]
@@ -573,7 +548,7 @@ elif Mode == 'add':
         # Save out
         set_uvar(OutputName, dump_json(WBattles))
         # Output Build
-        desc = "__"+Pick.capitalize()+"__: Added entry `"+strArgs.replace(sep,sepSlash)+"`"
+        desc = "__"+Pick.title()+"__: Added entry `"+strArgs.replace(sep,sepSlash)+"`"
         # Wipe because we succeded
         attempted = ""
         examples = "" 
@@ -583,7 +558,7 @@ elif Mode == 'edit':
   # Cover Output that's always true
   title = AliasName+" - Battle Editor ("+Mode.capitalize()+")"
   
-  examples = "`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 0 "+AliasPrefix+"i madd Ogre -n 2`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 5 "+AliasPrefix+"i effect OG1 bulk -ac +10`"+newLine+"`"+AliasCommand+" "+Mode+" \\\"Example Battle\\\" 3 "+AliasPrefix+"i meta -name \\\"Boss Battle 2\\\"`"
+  examples = "`"+AliasCommand+" "+Mode+PlanEditExample
   Display = ViewOverride if ViewOverride else 'view-numeric'
   selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
 
@@ -601,8 +576,8 @@ elif Mode == 'edit':
     else:
       if not Pick in WBattles: # Editing with Multi-Source
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc =  "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
         examples = ""
       else:
         # Ready to Modify the selected entry
@@ -651,8 +626,8 @@ elif Mode == 'remove':
     else:      
       if not Pick in WBattles: # Editing with Multi-Source
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc =  "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
         examples = ""
       else: # Ready to Remove the selected entry
         selected = int(args.pop(0))
@@ -706,8 +681,8 @@ elif Mode == 'move':
     else: # Success
       if not Pick in WBattles: # Editing with Multi-Source
         # Output Build
-        desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `"+AliasCommand+" options source <NewSource>`"
-        selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+        desc =  "Cannot "+Mode+" to `"+Pick+"`: "+MultiSourceError
+        selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
       else: # Do the move        
         entry = editBattles[selected]
         editBattles.pop(selected)
@@ -739,18 +714,18 @@ elif Mode == 'map':
   selectIntruction = "Select a Battle Plan to edit:"+newLine+PlanList
 
   if not TryPick: # No Battle Name Provided -- TUTORIAL HERE
-    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
+    desc = "You must specify a Battle Name to add map information to a battle."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan."+newLine+MapTextHelper
   elif not Pick: # No Plan Found
     desc = "Battle `"+TryPick.capitalize()+"` not found."+newLine+"Did you mean `new`?"
   else: # We've got an existing battle, edit it.
     editBattles = RBattles[Pick]
     if not args:
-      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan. Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>] *`"+newLine+"`[-mapsize <XxY size>] *^`"+newLine+"`[-view <view>] *`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**^ Indicates this value is required!**"+newLine+"*** Indicates only the last value will be used.**"
+      desc = "You must specify `set` or `clear` to modify a map."+newLine+newLine+"The `"+Mode+"` command is designed to simplify adding map information to an existing Battle Plan."+newLine+MapTextHelper
       selectIntruction = ""
     elif not Pick in WBattles: # Editing with Multi-Source
       # Output Build
       desc = "Cannot "+Mode+": `"+Pick+"`"+newLine+"_Mult-Source View is an advanced feature._"+newLine+"Battles not in the working source [`"+OutputName+"`] cannot be edited."+newLine+"To change the working source: `!"+AliasCommand+" options source <NewSource>`"
-      selectIntruction = "Working Source Battles:"+newLine+WPlanList # Special Instruction
+      selectIntruction = "Working Source Battles:"+newLine+(WPlanList if WPlanList else '`None Stored`') # Special Instruction
       examples = ""
     else:
       if args[0] == 'set': # Add Map notes
@@ -758,7 +733,7 @@ elif Mode == 'map':
         args.pop(0)
         rez=0
         # Find the prefix and entry
-        for prefix in MapAttaches:
+        for prefix in OptionsFixed['MapAttach']:
           editBattles[:] = (value for value in editBattles if not ((value.startswith('!i add ') or value.startswith('!init add ')) and value.endswith((prefix+' -p',prefix))))
           editBattles[:] = (value for value in editBattles if not (value.startswith('!i effect '+prefix+' map -attack') or value.startswith('!init effect '+prefix+' map -attack')))
 
@@ -771,7 +746,7 @@ elif Mode == 'map':
         work = argparse(args)
         mapCommands += [f"""{argDescMap[x][0]}: {work.join(x,argDescMap[x][1])} ~""" for x in argDescMap.keys() if work.get(x)]
         mapCommands += [f"""{argSingleDescMap[x]}: {work.last(x)} ~""" for x in argSingleDescMap.keys() if work.last(x)]
-
+        # Put all the commands together
         mapCommands = " ".join(mapCommands)
         mapCommands = mapCommands[::-1].replace('~ ', '', 1)[::-1]
 
@@ -802,7 +777,7 @@ elif Mode == 'map':
         result = ""
 
         # Find the prefix and entry
-        for prefix in MapAttaches:
+        for prefix in OptionsFixed['MapAttach']:
           editBattles[:] = (value for value in editBattles if not ((value.startswith('!i add ') or value.startswith('!init add ')) and value.endswith((prefix+' -p',prefix)) or (value.startswith('!i effect '+prefix+' map -attack') or value.startswith('!init effect '+prefix+' map -attack'))))
 
         # Store and Save
@@ -843,12 +818,13 @@ elif Mode == 'n' or Mode == 'p':
     for entry in load_json(CommandStore['Pages'][CommandStore['CurrentPage']-1]):
       commandList += entry.replace(sepSlash, sep)
 
-    return f"""embed -title "{CommandStore['Title']}" -desc "{CommandStore['InfoBefore']}{pagingInfo+newLine+newLine+commandList}{CommandStore['InfoAfter']}"  {foot}"""
+    return f"""embed -title "{CommandStore['Title']}" -desc "{pagingInfo+newLine+newLine+commandList}{CommandStore['HelperText']}{CommandStore['BodyText']}"  {foot}"""
 
 if Mode == 'view' or Display == 'view-pretty':
   # Used By View
   failed = False # Catches view specific issues
   work = entryOut = effectsOut = addsOut = notesOut = optsOut = metaOut = extraOut = finalName = ""
+  # TODO: #2 Convert PlanList to an Inline
   if not Display == 'view-pretty': # Handle only our errors, not fall-throughs
     title = AliasName+" - Battle Viewer"
   if not TryPick: # No Battle Name Provided
@@ -969,7 +945,7 @@ if Mode == 'view' or Display == 'view-pretty':
     if finalName: # Handle Special View Names
       Pick = finalName
     # Build our Output
-    desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+"__"+Pick.capitalize()+"__" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine + addsOut.replace('|',pipeSlash) if addsOut else ''}{newLine + effectsOut.replace('|',pipeSlash) if effectsOut else ''}{newLine + optsOut.replace('|',pipeSlash) if optsOut else ''}{newLine + notesOut.replace('|',pipeSlash) if notesOut else ''}{newLine + metaOut.replace('|',pipeSlash) if metaOut else ''}{newLine + extraOut.replace('|',pipeSlash) if extraOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
+    desctemp = f"""{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}{newLine+newLine+"__"+Pick.title()+"__" if Pick else ''}{entryOut.replace('|',pipeSlash) if entryOut else ''}{newLine + addsOut.replace('|',pipeSlash) if addsOut else ''}{newLine + effectsOut.replace('|',pipeSlash) if effectsOut else ''}{newLine + optsOut.replace('|',pipeSlash) if optsOut else ''}{newLine + notesOut.replace('|',pipeSlash) if notesOut else ''}{newLine + metaOut.replace('|',pipeSlash) if metaOut else ''}{newLine + extraOut.replace('|',pipeSlash) if extraOut else ''}""".replace(sepSlash, sep).replace(sepSingle,sepSingleSlash)
     #.replace(sep,sepSlash).replace(sepSingle,sepSingleSlash).replace(sepSingleSlash, sepSingle)
 
     if len(desctemp) <= 2048: # We're under limit - Do the display
@@ -1000,12 +976,12 @@ if Mode == 'view-numeric' or Display == 'view-numeric':
   if not failed:
     if not Display: # We're viewing
       attempted = ""
-      desc = "__"+Pick.capitalize()+"__"
+      desc = ""
     # Paging stuff
     Battles = RBattles[Pick]
     commandList = newLine.join(['`'+str(i)+'`: '+x.replace(sep, sepSlash) for (i,x) in enumerate(Battles)])
     CommandSplit = commandList.splitlines(True)
-    baseMessage= (f"""embed -title "{title}" -desc "{desc}
+    baseMessage = (f"""embed -title "{title}" -desc "{desc}
         Selected Battle Plan: `{Pick}`{newLine+'Attempted:'+newLine+'`'+fullCommand+'`' if attempted else ''}
 
         Commands:
@@ -1027,8 +1003,8 @@ if Mode == 'view-numeric' or Display == 'view-numeric':
       # Now write out the cache, display the first page
       commandOut = "".join(load_json(Pages[0]))
       CommandStore['Title'] = title
-      CommandStore['InfoBefore'] = desc+newLine+"Selected Battle Plan: `"+Pick+"`"+(newLine+newLine+attempted if attempted else '')+newLine+newLine+"Commands:"+newLine
-      CommandStore['InfoAfter'] = (newLine+newLine+"Examples:"+newLine+examples if examples else '')+(newLine+newLine+selectIntruction if selectIntruction else '')
+      CommandStore['HelperText'] = (newLine+newLine+"Examples:"+newLine+examples if examples else '')+(newLine+newLine+selectIntruction if selectIntruction else '')
+      CommandStore['BodyText'] = desc+newLine+"Selected Battle Plan: `"+Pick+"`"+(newLine+newLine+attempted if attempted else '')+newLine+newLine+"Commands:"+newLine
       CommandStore['PageCount'] = int(len(Pages))
       CommandStore['CurrentPage'] = 1
       
@@ -1038,5 +1014,5 @@ if Mode == 'view-numeric' or Display == 'view-numeric':
       pagingInfo = "**Page:** 1/"+str(CommandStore.get('PageCount'))+" `"+AliasCommand+" [n|p] Next|Previous Page`"
     else:
       commandOut = commandList
-  return (f"""embed -title "{title}" -desc "{desc}{newLine+newLine+attempted if attempted else ''}{newLine+newLine+"Commands:" if commandOut else ''}{newLine+pagingInfo+newLine if pagingInfo else ''}{newLine+commandOut.replace('|',pipeSlash) if commandOut else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}" {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}""")
+  return (f"""embed -title "{title}" -desc "{desc if desc else ''}{newLine+newLine+attempted if attempted else ''}{newLine+pagingInfo+newLine if pagingInfo else ''}{newLine+newLine+"Examples:"+newLine+examples if examples else ''}{newLine+newLine+selectIntruction if selectIntruction else ''}{newLine+newLine+"__"+Pick.title()+"__"+newLine+"Commands:"+newLine+commandOut.replace('|',pipeSlash) if commandOut else ''}" {"-f 'DisplayMode: "+Display+"'" if Display else ''} {foot}""")
 </drac2>
