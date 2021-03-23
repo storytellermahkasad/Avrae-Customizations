@@ -1,6 +1,6 @@
 <drac2>
 Source=get('BattlePlanLoc', 'Battles')
-foot=f'-footer "!bplan help | Battle Source: {Source} | v2.35 Made by @Mahkasad#5996"'
+foot=f'-footer "!bplan help | Battle Source: {Source} | v2.62 Made by @Mahkasad#5996"'
 BP="Battle Planner"
 title=f'embed -title "{BP}"'
 
@@ -17,13 +17,13 @@ Restore default options
 For manual corrections to Load Check
 
 -- Using --
-`view <battlename>`
+`view <planname>`
 Look at a specific battle
 
 `p|n`
 Previous|Next page of a multipage display
 
-`begin <battlename> <meta_args>`
+`begin <planname> <meta_args>`
 Start Initiative for a battle (Handles all arguments of `!i begin`)
 
 `more`
@@ -33,29 +33,32 @@ Continue adding entries to an initiative (When you have more commands than multi
 End Initiative (Same as `!i end`)
 
 -- Editing --
-`new <battlename> [command]`
+`new <planname> [command]`
 Create a new battle plan. If no command provided, make an empty plan.
 
-`add <battlename> <command>`
+`add <planname> <command>`
 Add an entry to a battle plan.
 
-`map <battlename>`
+`map <planname>`
 Set or Clear `!map` related values.
 
-`edit <battlename> <command #> <new command>`
+`edit <planname> <command #> <new command>`
 Edit an entry in a battle plan.
 
-`move <battlename> <command #> <new command #>`
+`move <planname> <command #> <new command #>`
 Move an entry in a battle plan.
 
-`rename <battlename> <new battlename>`
+`rename <planname> <new planname>`
 Rename a battle plan.
 
-`remove <battlename> <command #>`
+`remove <planname> <command #>`
 Remove an entry from a battle plan.
 
+`export <planname>`
+Export a saved battle plan for others to copy.
+
 -- Deleting --
-`delete <battlename>`
+`delete <planname>`
 Delete a single battle by name
 
 `clear confirm`
