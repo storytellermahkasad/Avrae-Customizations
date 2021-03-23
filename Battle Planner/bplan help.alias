@@ -1,6 +1,15 @@
 <drac2>
 Source=get('BattlePlanLoc', 'Battles')
-foot=f'-footer "!bplan help | Battle Source: {Source} | v2.62 Made by @Mahkasad#5996"'
+
+# Alias Generic Variables
+AuthorName = 'Mahkasad#5996'
+AliasName = 'Battle Planner'
+AliasPrefix = ctx.prefix
+AliasCommand = ctx.prefix+ctx.alias
+versionNumner = "2.62"
+version = "v"+versionNumner
+
+foot = f"-footer '{AliasCommand} help | {version} Made by {AuthorName}'  -color {color} -thumb 'https://i.redd.it/6ot7a91iixr51.png'"
 BP="Battle Planner"
 title=f'embed -title "{BP}"'
 
@@ -66,7 +75,10 @@ Deletes all battles, but only if both commands are passed
 
 ----
 
-BPlan is compatible with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20) and `!battle` by _Derixyleth#0636_
+Fully Compatible with [Map](https://avrae.io/dashboard/workshop/5f6a4623f4c89c324d6a5cd3)
+Works fully with [Dynamic Encounter Tool](https://avrae.io/dashboard/workshop/5f790de74ded026d119cff20)
+Can load encounters created with `!battle` by _Derixyleth#0636_
+
 Currently BPlan is under development.
 
 See the [workshop](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f) for more details." {foot}""")

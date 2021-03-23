@@ -73,12 +73,14 @@ argSingleDescMap = {
 # Error Catching
 set_uvar(LoadCheckName,int(get(LoadCheckName,-1))+1)
 
+foot = f"-footer '{AliasCommand} help | {version} Made by {AuthorName}'  -color {color} -thumb 'https://i.redd.it/6ot7a91iixr51.png'"
+
 if args: # Fall Back Commands - In case someone screws up
   if args[0].lower() == 'fix':
     delete_uvar(LoadCheckName) # Success Loading
     return (f"""embed -title '{AliasName} - Fix' -desc "The {AliasName} Tool Load Check has been fixed.
 
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
+    For a list of commands see `{AliasCommand} help`"  """)
   if args[0].lower() == 'reset':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     TopOptionsVar.update(load_json('{\"'+OptionsVarName+'\": {}'+'}'))
@@ -87,18 +89,18 @@ if args: # Fall Back Commands - In case someone screws up
     return (f"""embed -title '{AliasName} - Reset' -desc "The {AliasName} Tool has done a reset of the `{OptionsVarName}` portion of the `{Top_OptionsVarName}` uvar. This should be done if the load uvars have been corrupted.
 
     If the problem persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}` or contact me on my Discord.
-    For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
+    For a list of commands see `{AliasCommand} help`" {foot}""")
   elif args[0].lower() == 'clear':
     TopOptionsVar = load_json(get(Top_OptionsVarName, "{ \""+Top_OptionsVarName+"\": {}"+"}"))
     OptionsVar = TopOptionsVar.get(OptionsVarName, load_json('{\"'+OptionsVarName+'\": {}'+'}'))
     OutputName= OptionsVar.get('OutputLocation', OptionsDefault['OutputLocation'])
     if not len(args) > 1 or not args[1]=='confirm': # Make sure 'clear confirm'
       return (f"""embed -title '{AliasName} - Clear All Output Battles' -desc "You must specify a confirmation to clear all `{OutputName}` battles:
-      `{AliasCommand} clear confirm`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
+      `{AliasCommand} clear confirm`" {foot}""")
     else: # Wipe out the uvar
       set_uvar(OutputName, "{}")
       delete_uvar(LoadCheckName) # Success Loading
-      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in `{OutputName}` cleared. Add more with `{AliasCommand} new`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
+      return (f"""embed -title '{AliasName} - Clear All Battles' -desc "All Battles in `{OutputName}` cleared. Add more with `{AliasCommand} new`" {foot}""")
 
 if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then help message
   return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
@@ -123,7 +125,7 @@ if int(get(LoadCheckName)) > 0: # If we get here and have already failed, then h
 
   If the problem still persists try doing a `{AliasPrefix}uvar delete {Top_OptionsVarName}`
   or contact me on my Discord (found in `{AliasCommand} help`).
-  For a list of commands see `{AliasCommand} help`"  -footer '{AliasCommand} help | {version} Made by {AuthorName}'""")
+  For a list of commands see `{AliasCommand} help`" {foot}""")
 
 # We've passed the first load in check
 # Load the Options
@@ -200,7 +202,7 @@ desc = commandList = examples = selectIntruction = pagingInfo = ""
 fullCommand = f"""{AliasCommand}{' '+" ".join(&ARGS&) if &ARGS& else ''}"""
 title = AliasName+(" - "+Mode.capitalize() if Mode else '')
 attempted = "Attempted:"+newLine+"`"+fullCommand+"`"
-foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by {AuthorName}'"""
+foot = f""" -footer '{AliasCommand} help | Source: [{SourceName[0] if len(SourceName)==1 else ",".join(SourceName)}]{' | Output:['+OutputName+']' if not OutputName == ",".join(SourceName) else ''} | {version} Made by {AuthorName}' -color {color} -thumb 'https://i.redd.it/6ot7a91iixr51.png'"""
 # Fixed Strings
 MultiSourceError = newLine+"_Mult-Source View is an advanced feature._"+newLine+newLine+"Battles cannot be edited unless stored in Output: `"+OutputName+"`"+newLine+"To change the Output: `"+AliasCommand+" options`"
 MapTextHelper = "Using `set` alone primes the battle for the `"+AliasPrefix+"map` command. Using `set` along with the following will assign map information:"+newLine+"`[-bg <url link>]` `*`"+newLine+"`[-mapsize <XxY size>]` `*^`"+newLine+"`[-view <view>]` `*`"+newLine+"`[-options <options>]`"+newLine+"`[-objects <objects>]`"+newLine+"`[-walls <walls>]`"+newLine+"`[-fow <fow>]`"+newLine+"`[-json <json>]`"+newLine+newLine+"**Note:**"+newLine+"**`^` Indicates this value is required!**"+newLine+"**`*` Indicates only the last value will be used.**"
@@ -828,7 +830,7 @@ elif Mode == 'n' or Mode == 'p':
     title = AliasName+" - More Display"
     desc = "There is currently no cache to page through."+newLine+"Run a command that has multiple pages first to use this interface"
 
-    return f"""embed -title "{title}" -desc "{desc}{newLine+newLine+attempted if attempted else ''}"  {foot}"""
+    return f"""embed -title "{title}" -desc "{desc}{newLine+newLine+attempted if attempted else ''}" {foot}"""
 
   else:
     if Mode == 'n':
@@ -845,7 +847,7 @@ elif Mode == 'n' or Mode == 'p':
     for entry in load_json(CommandStore['Pages'][CommandStore['CurrentPage']-1]):
       commandList += entry.replace(sepSlash, sep)
 
-    return f"""embed -title "{CommandStore['Title']}" -desc "{pagingInfo+newLine+newLine+commandList}{CommandStore['HelperText']}{CommandStore['BodyText']}"  {foot}"""
+    return f"""embed -title "{CommandStore['Title']}" -desc "{pagingInfo+newLine+newLine+commandList}{CommandStore['HelperText']}{CommandStore['BodyText']}" {foot}"""
 
 if Mode == 'view' or Display == 'view-pretty':
   # Used By View
