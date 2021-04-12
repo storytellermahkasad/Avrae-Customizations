@@ -9,7 +9,7 @@ AliasCommand = ctx.prefix+ctx.alias
 versionNumner = "2.62"
 version = "v"+versionNumner
 
-foot = f"-footer '{AliasCommand} help | {version} Made by {AuthorName}'  -color {color} -thumb 'https://i.redd.it/6ot7a91iixr51.png'"
+foot = f"-footer '{AliasCommand} help | {version} Made by {AuthorName}' "
 BP="Battle Planner"
 title=f'embed -title "{BP}"'
 
@@ -83,3 +83,4 @@ Currently BPlan is under development.
 
 See the [workshop](https://avrae.io/dashboard/workshop/5f7eb5d2f2d59b2718720f7f) for more details." {foot}""")
 </drac2>
+-color {color} -thumb 'https://i.redd.it/6ot7a91iixr51.png'
