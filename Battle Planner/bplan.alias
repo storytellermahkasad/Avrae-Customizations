@@ -16,7 +16,7 @@ version = "v"+versionNumner
 
 #Alias Specific Variables
 # I hate it, but double-escape it keeps it functional
-newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|'
+newLine, sep, sepSingle, sepSlash, sepSingleSlash, openBrace, closeBrace, slash, pipeSlash, fancyLeft, fancyRight, fancySingle ="\n",'\"','\'','\\\"', '\\\'', '{', '}', '\\', '\|','“','”','’'
 
 Mode = Display = PlanList = WPlanList = Pick = TryPick = ''
 Fuzzy = False
@@ -109,6 +109,17 @@ if args: # Fall Back Commands - In case someone screws up
       set_uvar(OutputName, "{}")
       delete_uvar(LoadCheckName) # Success Loading
       return (f"""embed -title '{AliasName} - Clear All Plans' -desc "All Battle Plans in `{OutputName}` cleared. Add more with `{AliasCommand} new`" {Foot}""")
+  if '“' in strArgs or '”' in strArgs or '’' in strArgs:
+    FullCommand = f"""{AliasCommand}{' '+origArgs if origArgs else ''}"""
+    CodeAttempted = f"Attempted:{newLine}```{newLine+FullCommand+newLine}```"
+
+    return (f"""embed -title '{AliasName} - Fancy Quotes' -desc "Found Fancy or Smart Quotes `{fancyLeft} {fancyRight} {fancySingle}` in command.
+    Please replace them with `{sepSlash} {sepSlash}` or `{sepSingle} {sepSingle}`.
+
+    On iOS (and probably some Android keyboards), there is a setting for 'Smart Punctuation'. While it does make your quotes look nicer, it unfortunately can break some things when aliasing, as they are not what the code expects. Here is a recording on how to disable it on iOS. (Special Thanks to Riptidecord#7191 for the recording.)
+    
+    {CodeAttempted}" -image 'https://cdn.discordapp.com/attachments/583123959097196545/755244715707858984/ezgif-6-3ead168dc0bf.gif' {Foot}""")
+
 
 if int(get(LoadCheckName)) > 2: # If we get here and have already failed, then help message
   return (f"""embed -title '{AliasName} - Failed to Load' -desc "The {AliasName} Tool has failed to load more than once.
