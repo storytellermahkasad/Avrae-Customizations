@@ -1,6 +1,12 @@
 <drac2>
+AuthorName = 'Mahkasad#5996'
+AliasName = 'Set Slots'
+AliasPrefix = ctx.prefix
+AliasCommand = ctx.prefix+ctx.alias
+Foot = f"-footer '{AliasCommand} <targetName> <slot level> <new value> | Made by {AuthorName}' "
+
 args = &ARGS&
-title = ''
+title,n = '','\n'
 targ = args[0] if args else ''
 spellLevel = args[1] if len(args)>1 else ''
 restore = args[2] if len(args)>2 else ''
@@ -10,11 +16,15 @@ if targ and spellLevel.isdigit() and restore.isdigit():
   if c:
     tar = c.get_combatant(targ)
     if tar:
-      prev = tar.spellbook.get_slots(spellLevel)
-      tar.spellbook.set_slots(spellLevel,restore)
-      return f"""embed -title "Set Slots - Restored Slots to {tar.name}" -f "Spell Slots Level {prev}->{tar.spellbook.get_slots(spellLevel)}|{tar.spellbook.slots_str(spellLevel)}" -footer "!setspells <targetName> <slot level> <restore value> | Made by @Mahksad#5996" """
+      sp = tar.spellbook
+      prev = sp.get_slots(spellLevel)
+      sp.set_slots(spellLevel,restore)
+      slots = [sp.slots_str(x) for x in range(1,10) if sp.get_max_slots(x)]
+      
+      return f"""embed -title "{AliasName} on {tar.name}" -f "Spell Slots Level {spellLevel}|Changed: {prev} -> {tar.spellbook.get_slots(spellLevel)}{n+n+n.join(slots)+'"' if slots else ""} {Foot} """
     else:
-      title = 'Set Slots - Could not find Combatant!'
-return f"""embed -title "{title if title else 'Set Slots - Failed to Restore Slots'}" -desc "Got Name: `{targ if targ else ' '}` Slot: `{spellLevel if spellLevel else ' '}` Value: `{restore if restore else ' '}`
-You must enter a `!setspells <targetName> <slot level> <restore value>`" -footer "!setspells <targetName> <slot level> <restore value> | Made by @Mahksad#5996" """
+      title = f'{AliasName} - Could not find Combatant!'
+return f"""embed -title "{title if title else f'{AliasName} - Failed to Restore Slots'}" -desc "Got Name: `{targ if targ else '<None>'}` Slot: `{spellLevel if spellLevel else '<None>'}` Value: `{restore if restore else '<None>'}`
+You must enter a valid `<targetName>` `<slot level>` and `<new value>`" {Foot} """
 </drac2>
+-color <color> -thumb <image>

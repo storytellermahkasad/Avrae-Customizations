@@ -1,6 +1,12 @@
 <drac2>
+AuthorName = 'Mahkasad#5996'
+AliasName = 'Targeted Recast'
+AliasPrefix = ctx.prefix
+AliasCommand = ctx.prefix+ctx.alias
+Foot = f"-footer '{AliasCommand} <caster> <spellname> <args> | Made by {AuthorName}' -color <color> -thumb <image>"
+
 args = &ARGS&
-result = f"""embed -title "{name} Tries to Recast!" -desc "You must supply a caster, spell name, and any additional arguments to reapply. `-i noconc` is appended by trecast. All other arguments work normally." -color {color} -thumb {image}"""
+result = f"""embed -title "{name} Tries to Recast!" -desc "You must supply a `caster`, `spell name`, and any `additional` arguments to reapply. `-i noconc` is appended by trecast. All other arguments work normally." {Foot} """
 if args and len(args) > 1:
   caster,spellname = args.pop(0),args.pop(0)
   result = f"""i rc {caster} {spellname} {" ".join(args)} -i noconc""" 
