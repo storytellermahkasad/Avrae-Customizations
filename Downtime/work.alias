@@ -1,0 +1,64 @@
+!alias gather <drac2>
+#assign variables
+args,pArgs,ch = &ARGS&,argparse(&ARGS&), character()
+n = '\n'
+Command = ctx.prefix+ctx.alias
+Foot = f"-footer '{Command} help | 1.0 Made by Mahkasad#5996'"
+attempts = 3 # Change to change base number of rolls per attempt
+thresholds = [
+    {"DC": 10, "Cost": 0, "Pay": 50},
+    {"DC": 15, "Cost": 25, "Pay": 100},
+    {"DC": 20, "Cost": 100, "Pay": 400},
+    {"DC": 25, "Cost": 400, "Pay": 1600}
+]
+
+validTools = ["Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies", "Carpenter's Tools", "Cartographer's Tools", "Cobbler's Tools", "Disguise Kit", "Forgery Kit", "Herbalism Kit", "Poisoner's Kit", "Cook's Utensils", "Glassblower's Tools", "Jeweler's Tools", "Leatherworker's Tools", "Mason's Tools", "Painter's Supplies", "Potter's Tools", "Smith's Tools", "Tinker's Tools", "Weaver's Tools", "Woodcarver's Tools", "Navigator's Tools", "Thieves' Tools"]
+stats = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']
+
+if args:
+    # grab the first argument and match it to a tool
+    # grab the 2nd argument and match it to an ability
+    # grab the dc
+    tool = ([x for x in validTools if args[0].lower().replace(' ','') in x.lower()]+[None])[0]
+    stat = ([x for x in stats if args[1].lower() in x.lower()]+[None])[0]
+    task = ([x for x in thresholds if pArgs.last('dc', None, int)==x.DC]+[None])[0]
+
+if not tool or not stat or not task: # Put out the help if missing args
+    return f"""embed -title '{name} is looking to do some Work!' -desc 'You must select a valid tool, attribute, and task DC in the following format:
+    `{Command} <tool> <attr> -dc <#> [adv|dis|ea] [-b <bonus>] [-mc <#>] [-mi10]`' -f "Tools|{', '.join(validTools)}" -f "Attributes|{', '.join([x.title() for x in stats])}" -f "Tasks|{n.join([f'DC: {x.DC} | Cost: {x.Cost} | Payout: {x.Pay}' for x in thresholds])}" """
+
+# calculate the proficiency bonus
+prof = f'+{2*proficiencyBonus} [expertise]' if (exists('eTools') and tool in eTools) else f'+{proficiencyBonus} [proficient]' if (exists('pTools') and tool in pTools) else f'[Jack of all Trades]' if ch.levels.get('Bard') >= 2 else ''
+
+# advantage and minimum check/relentless talent
+adv = pArgs.adv(boolwise=True)
+minimum_check = pArgs.last('mc', None, int) or (10 if (ch.csettings.get("talent", False) or pArgs.last('mi10')) else None)
+
+#grab our bonuses, if any and add them to our roll
+bonus = ("+" + pArgs.join('b', '+', '') if pArgs.get('b') else '')
+
+repeat = pArgs.last('rr',1,int)
+out, totalPayout, totalWaste = "", 0, 0
+for loop in range(repeat): # loop for the -rr
+    rolls = []
+    aSuccess = aPayout = aWaste = 0
+    for attempt in range(attempts): # Loops for the attempt
+        # We are overriding the bonuses so this is effectively a flat 1d20 base
+        r = vroll(ch.skills[stat].d20(adv, min_val=minimum_check)+(prof if prof else '')+bonus)
+        if r.total >= task.DC:
+            aSuccess += 1
+        rolls.append(r)
+        # Calculate the earnings/cost/waste
+        aWaste = (task.Cost // 25) * (aSuccess < 1)
+        aCost = task.Cost * (aSuccess < 3)
+        aPayout = task.Pay * (aSuccess > 1) - aCost
+    # Add the nice messages
+    out += f""" -f "Attempt #{loop+1}" -f "Rolls|{n.join([x.full+' | Success' if x.total >= task.DC else x.full for x in rolls])}|inline"
+    -f "Results|Successes: `{aSuccess}`{n}Cost: `{aCost}`{n}Weeks Wasted: `{aWaste}`{n}Earned: `{aPayout}`|inline" """
+    totalPayout += aPayout
+    totalWaste += aWaste
+
+#return our roll, replacing the oddly formatted skills with properly spaced plain text.
+return f"""embed -title '{name} does Work!' -desc "Tool: {tool+n}Stat: {stat.title()+n}---{n}DC: {task.DC} | Cost: {task.Cost} | Payout: {task.Pay}" {out} -f "Total: `{totalPayout}gp` `{totalWaste} Wasted Weeks`" """
+</drac2>
+-color <color> -thumb <image>
